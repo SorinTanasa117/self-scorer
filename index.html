@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Self-Appreciation App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="user-icon" id="userIcon" style="display: none;">
+            <span>Welcome</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="registrationForm" style="display: block;">
+            <h2>Register</h2>
+            <form>
+                <input type="text" id="regName" placeholder="Name" required>
+                <input type="email" id="regEmail" placeholder="Email" required>
+                <input type="password" id="regPassword" placeholder="Password" required>
+                <button type="submit">Register</button>
+            </form>
+            <p>Already have an account? <a href="#" id="showLogin">Login</a></p>
+        </section>
+
+        <section id="loginForm" style="display: none;">
+            <h2>Login</h2>
+            <form>
+                <input type="email" id="loginEmail" placeholder="Email" required>
+                <input type="password" id="loginPassword" placeholder="Password" required>
+                <button type="submit">Login</button>
+            </form>
+            <p>Don't have an account? <a href="#" id="showReg">Register</a></p>
+        </section>
+
+        <section id="appContent" style="display: none;">
+            <h1>My Self-Appreciation Journal</h1>
+            <div id="journal-entries"></div>
+            <form id="new-entry-form">
+                <textarea id="new-entry-text" placeholder="What's something you appreciate about yourself today?"></textarea>
+                <button type="submit">Add Entry</button>
+            </form>
+        </section>
+
+        <div id="userDialog" style="display: none;">
+            <p id="userName"></p>
+            <button id="signOutBtn">Sign Out</button>
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.6.1/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "BHn-jng04zCMFw3kvHXi6UQyVs1Zf54Cu6rTKvaY0uG7L9I97h2JNgHe8HZdcwjPg9UxBcKYQrJNB5x2JuPAuPA",
+            authDomain: "self-affirmation-dd4bb.firebaseapp.com",
+            projectId: "self-affirmation-dd4bb",
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+    </script>
+    <script src="script.js"></script>
+</body>
+</html>
