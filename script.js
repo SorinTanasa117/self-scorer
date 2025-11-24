@@ -17,7 +17,8 @@ import {
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const homePage = document.getElementById('home-page');
-    const authPage = document.getElementById('auth-page');
+    const loginPage = document.getElementById('login-page');
+    const registerPage = document.getElementById('register-page');
     const addPositivePage = document.getElementById('add-positive-page');
     const useTemplatePage = document.getElementById('use-template-page');
 
@@ -25,6 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const registerForm = document.getElementById('register-form');
     const loginForm = document.getElementById('login-form');
     const signoutBtn = document.getElementById('signout-btn');
+    const gotoRegisterLink = document.getElementById('goto-register');
+    const gotoLoginLink = document.getElementById('goto-login');
 
     // Home Page
     const addPositiveBtnHome = document.getElementById('add-positive-btn-home');
@@ -75,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Page Navigation & UI Updates ---
     const showPage = (pageToShow) => {
-        [homePage, authPage, addPositivePage, useTemplatePage].forEach(page => {
+        [homePage, loginPage, registerPage, addPositivePage, useTemplatePage].forEach(page => {
             if (page === pageToShow) {
                 page.classList.remove('hidden');
             } else {
@@ -667,8 +670,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateButtonStates();
             } else {
                 signoutBtn.classList.add('hidden');
-                showPage(authPage);
+                // Clear user-specific data
+                myTemplates = [];
+                calendarEl.innerHTML = '';
+                positivesListEl.innerHTML = '';
+                if (myChart) {
+                    myChart.destroy();
+                }
+                showPage(loginPage);
             }
+        });
+
+        gotoRegisterLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showPage(registerPage);
+        });
+
+        gotoLoginLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showPage(loginPage);
         });
 
         registerForm.addEventListener('submit', async (e) => {

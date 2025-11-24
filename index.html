@@ -13,38 +13,41 @@
     </header>
 
     <main>
-        <section id="auth-page">
-            <div class="auth-container">
-                <div class="auth-form">
-                    <h3>Register</h3>
-                    <form id="register-form">
-                        <div class="form-group">
-                            <label for="register-email">Email</label>
-                            <input type="email" id="register-email" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="register-password">Password</label>
-                            <input type="password" id="register-password" required>
-                        </div>
-                        <button type="submit">Register</button>
-                        <p class="error-message" id="register-error"></p>
-                    </form>
-                </div>
-                <div class="auth-form">
-                    <h3>Login</h3>
-                    <form id="login-form">
-                        <div class="form-group">
-                            <label for="login-email">Email</label>
-                            <input type="email" id="login-email" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="login-password">Password</label>
-                            <input type="password" id="login-password" required>
-                        </div>
-                        <button type="submit">Login</button>
-                        <p class="error-message" id="login-error"></p>
-                    </form>
-                </div>
+        <section id="login-page" class="auth-page">
+            <div class="auth-form">
+                <h3>Login</h3>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="login-email">Email</label>
+                        <input type="email" id="login-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <input type="password" id="login-password" required>
+                    </div>
+                    <button type="submit">Login</button>
+                    <p class="error-message" id="login-error"></p>
+                </form>
+                <p class="auth-switch">Don't have an account? <a href="#" id="goto-register">Register</a></p>
+            </div>
+        </section>
+
+        <section id="register-page" class="auth-page hidden">
+            <div class="auth-form">
+                <h3>Register</h3>
+                <form id="register-form">
+                    <div class="form-group">
+                        <label for="register-email">Email</label>
+                        <input type="email" id="register-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password">Password</label>
+                        <input type="password" id="register-password" required>
+                    </div>
+                    <button type="submit">Register</button>
+                    <p class="error-message" id="register-error"></p>
+                </form>
+                <p class="auth-switch">Already have an account? <a href="#" id="goto-login">Login</a></p>
             </div>
         </section>
 
