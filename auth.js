@@ -46,6 +46,7 @@ const loginUser = async (email, password) => {
 const logoutUser = async () => {
     try {
         await signOut(auth);
+        window.location.href = 'login.html';
         return { success: true };
     } catch (error) {
         return { error };
@@ -61,11 +62,24 @@ const getCurrentUser = () => {
     return auth.currentUser;
 };
 
-const addPositive = async (positive) => {
+const addPositive = async (positive, retries = 3) => {
     const user = getCurrentUser();
     if (!user) return { error: 'User not logged in' };
-    const docRef = await addDoc(collection(db, "users", user.uid, "positives"), positive);
-    return { id: docRef.id };
+
+    for (let i = 0; i < retries; i++) {
+        try {
+            const docRef = await addDoc(collection(db, "users", user.uid, "positives"), positive);
+            const newPositive = { id: docRef.id, ...positive };
+            return newPositive;
+        } catch (error) {
+            console.error(`Attempt ${i + 1} to add positive failed:`, error);
+            if (i === retries - 1) {
+                return { error: 'Failed to add positive after multiple retries.' };
+            }
+            // Wait for a short period before retrying
+            await new Promise(res => setTimeout(res, 1000));
+        }
+    }
 };
 
 const getAllPositives = async () => {
