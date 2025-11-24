@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelFromTemplateBtn = document.getElementById('cancel-from-template-btn');
 
     // --- State ---
+    let currentUser = null;
     let selectedDate = new Date().toISOString().split('T')[0];
     let currentMonth = new Date().getMonth();
     let currentYear = new Date().getFullYear();
@@ -375,18 +376,19 @@ document.addEventListener('DOMContentLoaded', () => {
             calendarEl.appendChild(emptyCell);
         }
         const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-        const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
-        let monthPositives = [];
-        try {
-            monthPositives = await getPositivesByDateRange(startDate, endDate);
-        } catch (error) {
-            console.error("Could not fetch calendar data. Rendering empty calendar.", error);
-        }
         const scoresByDate = {};
-        monthPositives.forEach(p => {
-            scoresByDate[p.date] = (scoresByDate[p.date] || 0) + p.score;
-        });
+        if (currentUser) {
+            const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+            const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+            try {
+                const monthPositives = await getPositivesByDateRange(startDate, endDate);
+                monthPositives.forEach(p => {
+                    scoresByDate[p.date] = (scoresByDate[p.date] || 0) + p.score;
+                });
+            } catch (error) {
+                console.error("Could not fetch calendar data. Rendering empty calendar.", error);
+            }
+        }
         for (let i = 1; i <= daysInMonth; i++) {
             const dayCell = document.createElement('button');
             dayCell.classList.add('calendar-day', 'day');
@@ -416,6 +418,10 @@ document.addEventListener('DOMContentLoaded', () => {
             dailyLogTitleEl.textContent = "Today's Positives";
         } else {
             dailyLogTitleEl.textContent = `Positives for ${dateStr}`;
+        }
+        if (!currentUser) {
+            positivesListEl.innerHTML = '<li>Please sign in to see your positives.</li>';
+            return;
         }
         const dayData = await getPositivesByDate(dateStr);
         console.log(`Rendering positives for ${dateStr}:`, dayData);
@@ -450,8 +456,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const labels = [];
         const chartData = [];
-            let maxScore = 0;
-            let legendLabel = 'Score';
+        let maxScore = 0;
+        let legendLabel = 'Score';
+        if (currentUser) {
             switch (range) {
                 case 'week': {
                     legendLabel = 'Daily Score';
@@ -534,34 +541,36 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 }
             }
-            myChart = new Chart(chartCanvas, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: legendLabel,
-                        data: chartData,
-                        borderColor: '#2980b9',
-                        backgroundColor: 'rgba(41, 128, 185, 0.1)',
-                        tension: 0.1,
-                        fill: true,
-                    }]
-                },
-                options: {
-                    scales: { y: { beginAtZero: true, max: maxScore + 5 } },
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            labels: {
-                                pointStyle: 'line'
-                            }
+        }
+        myChart = new Chart(chartCanvas, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: legendLabel,
+                    data: chartData,
+                    borderColor: '#2980b9',
+                    backgroundColor: 'rgba(41, 128, 185, 0.1)',
+                    tension: 0.1,
+                    fill: true,
+                }]
+            },
+            options: {
+                scales: { y: { beginAtZero: true, max: maxScore + 5 } },
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            pointStyle: 'line'
                         }
                     }
                 }
-            });
+            }
+        });
     };
     const populateMyTemplates = async () => {
+        if (!currentUser) return;
         myTemplates = await getAllCustomTemplates();
     };
     const isDateEditable = (dateStr) => {
@@ -576,9 +585,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return diffDays <= 2;
     };
     const updateButtonStates = () => {
-        addPositiveBtnHome.disabled = !isDateEditable(selectedDate);
+        const editable = isDateEditable(selectedDate);
+        addPositiveBtnHome.disabled = !editable || !currentUser;
+        useTemplateBtn.disabled = !currentUser;
     };
     const initializeUseTemplatePage = async () => {
+        if (!currentUser) {
+            templateMasterListEl.innerHTML = '<li>Please sign in to see your templates.</li>';
+            return;
+        }
         const allPositives = await getAllPositives();
 
         // Calculate usage counts
@@ -662,26 +677,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const updateUIForAuthState = async () => {
+        if (currentUser) {
+            signoutBtn.textContent = 'Sign Out';
+            await populateMyTemplates();
+        } else {
+            signoutBtn.textContent = 'Sign In';
+            myTemplates = [];
+        }
+        updateButtonStates();
+        await refreshHomePage();
+    };
+
     // --- Initial Load ---
     const init = async () => {
+        populateMainSelectors();
+        document.body.classList.remove('loading');
+
         onAuthStateChange(async (user) => {
-            document.body.classList.remove('loading');
-            if (user) {
-                // User is signed in.
-                populateMainSelectors();
-                await populateMyTemplates();
-                updateButtonStates();
-                await refreshHomePage();
-            } else {
-                // User is signed out, but we still render the calendar.
-                populateMainSelectors();
-                updateButtonStates();
-                await refreshHomePage();
-            }
+            currentUser = user;
+            await updateUIForAuthState();
         });
 
         signoutBtn.addEventListener('click', async () => {
-            await logoutUser();
+            if (currentUser) {
+                await logoutUser();
+            } else {
+                window.location.href = 'login.html';
+            }
         });
 
         setupDropdown(positiveTemplatesInput, standardTemplatesOptions, () => standardTemplates, (value) => {
