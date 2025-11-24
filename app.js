@@ -56,7 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const templateMasterListEl = document.getElementById('template-master-list');
     const searchMasterListInput = document.getElementById('search-master-list');
     const templateSelectAllBtn = document.getElementById('template-select-all-btn');
-    const saveFromTemplateBtn = document.getElementById('save-from-template-btn');
+    const saveFromTemplateBtnTop = document.getElementById('save-from-template-btn');
+    const saveFromTemplateBtnBottom = document.getElementById('save-from-template-btn-bottom');
     const cancelFromTemplateBtn = document.getElementById('cancel-from-template-btn');
 
     // --- State ---
@@ -329,11 +330,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     templateSelectAllBtn.addEventListener('click', () => {
-        templateDayPositivesListEl.querySelectorAll('input[type="checkbox"]').forEach(box => {
-            box.checked = true;
+        const allCheckboxes = templateDayPositivesListEl.querySelectorAll('input[type="checkbox"]');
+        const isSelectedAll = templateSelectAllBtn.textContent === 'Deselect All';
+
+        allCheckboxes.forEach(box => {
+            box.checked = !isSelectedAll;
         });
+
+        templateSelectAllBtn.textContent = isSelectedAll ? 'Select All' : 'Deselect All';
     });
-    saveFromTemplateBtn.addEventListener('click', async () => {
+
+    const saveFromTemplate = async () => {
         const selectedItems = new Map();
         templateDayPositivesListEl.querySelectorAll('input:checked').forEach(box => {
             if (!selectedItems.has(box.dataset.name)) {
@@ -352,7 +359,10 @@ document.addEventListener('DOMContentLoaded', () => {
             await addPositive(newPositive);
         }
         showPage(homePage);
-    });
+    };
+
+    saveFromTemplateBtnTop.addEventListener('click', saveFromTemplate);
+    saveFromTemplateBtnBottom.addEventListener('click', saveFromTemplate);
 
     // --- Rendering & Helper Functions ---
     const populateMainSelectors = () => {
@@ -710,13 +720,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initial Load ---
     const init = async () => {
+        // Initial UI Render
+        showPage(homePage); // Make sure the home page is visible
+        document.body.classList.remove('loading');
+        populateMainSelectors();
+        await renderCalendar(currentMonth, currentYear);
+        await renderPositivesForDay(selectedDate); // Show empty state for today
+        await renderChart('week');
+        updateButtonStates(); // Set initial button states
+
+        // Authentication Handling
         onAuthStateChange(async (user) => {
             currentUser = user;
-            document.body.classList.remove('loading');
-            populateMainSelectors();
             await updateUIForAuthState();
         });
 
+        // Event Listeners
         signoutBtn.addEventListener('click', async () => {
             if (currentUser) {
                 await logoutUser();
