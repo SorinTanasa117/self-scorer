@@ -39,6 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveTemplateBtn = document.getElementById('save-template-btn');
     const difficultySlider = document.getElementById('positive-difficulty');
     const difficultyValue = document.getElementById('difficulty-value');
+    const difficultyHelpIcon = document.getElementById('difficulty-help-icon');
+    const difficultyTooltip = document.getElementById('difficulty-tooltip');
     const positiveNameInput = document.getElementById('positive-name');
     const positiveTemplatesInput = document.getElementById('positive-templates-input');
     const standardTemplatesOptions = document.getElementById('standard-templates-options');
@@ -88,10 +90,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const showAddPositivePage = () => {
         showPage(addPositivePage);
         addPositiveForm.reset();
+        // Explicitly reset the slider's value to 5
+        difficultySlider.value = 5;
+        difficultyValue.textContent = '5';
         positiveNameInput.disabled = false;
         positiveTemplatesInput.disabled = false;
         myPositiveTemplatesInput.disabled = false;
         difficultySlider.disabled = false;
+        difficultyTooltip.classList.remove('visible'); // Ensure tooltip is hidden
     };
 
     const refreshHomePage = async () => {
@@ -126,6 +132,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     difficultySlider.addEventListener('input', () => {
         difficultyValue.textContent = difficultySlider.value;
+    });
+
+    difficultyHelpIcon.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent the document click listener from firing
+        difficultyTooltip.classList.toggle('visible');
     });
 
     // --- Custom Dropdown Logic ---
@@ -171,6 +182,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!e.target.closest('.custom-dropdown-container')) {
             standardTemplatesOptions.classList.remove('visible');
             myTemplatesOptions.classList.remove('visible');
+        }
+        if (!e.target.closest('.form-group')) {
+            difficultyTooltip.classList.remove('visible');
         }
     });
 
