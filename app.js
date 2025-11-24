@@ -691,11 +691,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initial Load ---
     const init = async () => {
-        populateMainSelectors();
-        document.body.classList.remove('loading');
-
         onAuthStateChange(async (user) => {
             currentUser = user;
+            document.body.classList.remove('loading');
+            populateMainSelectors();
             await updateUIForAuthState();
         });
 
