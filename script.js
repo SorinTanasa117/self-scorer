@@ -1,8 +1,30 @@
+import {
+    onAuthStateChange,
+    registerUser,
+    loginUser,
+    logoutUser,
+    addPositive,
+    getAllPositives,
+    getPositiveById,
+    updatePositive,
+    deletePositive,
+    addCustomTemplate,
+    getAllCustomTemplates,
+    getCustomTemplateByName,
+    updateCustomTemplate,
+} from './auth.js';
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const homePage = document.getElementById('home-page');
+    const authPage = document.getElementById('auth-page');
     const addPositivePage = document.getElementById('add-positive-page');
     const useTemplatePage = document.getElementById('use-template-page');
+
+    // Auth
+    const registerForm = document.getElementById('register-form');
+    const loginForm = document.getElementById('login-form');
+    const signoutBtn = document.getElementById('signout-btn');
 
     // Home Page
     const addPositiveBtnHome = document.getElementById('add-positive-btn-home');
@@ -53,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Page Navigation & UI Updates ---
     const showPage = (pageToShow) => {
-        [homePage, addPositivePage, useTemplatePage].forEach(page => {
+        [homePage, authPage, addPositivePage, useTemplatePage].forEach(page => {
             if (page === pageToShow) {
                 page.classList.remove('hidden');
             } else {
@@ -172,17 +194,17 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const existingTemplate = await db.getCustomTemplateByName(name);
+        const existingTemplate = await getCustomTemplateByName(name);
 
         if (existingTemplate) {
             // Update existing template
             existingTemplate.score = score;
-            await db.updateCustomTemplate(existingTemplate);
+            await updateCustomTemplate(existingTemplate);
             alert(`Template "${name}" updated!`);
         } else {
             // Add new template
             const newTemplate = { name, score };
-            await db.addCustomTemplate(newTemplate);
+            await addCustomTemplate(newTemplate);
             alert(`Template "${name}" saved!`);
         }
         await populateMyTemplates();
@@ -199,16 +221,16 @@ document.addEventListener('DOMContentLoaded', () => {
             name: name, date: selectedDate, score: parseInt(difficultySlider.value, 10),
             baseScore: parseInt(difficultySlider.value, 10), count: 1
         };
-        await db.addPositive(newPositive);
+        await addPositive(newPositive);
         showPage(homePage);
     });
 
     positivesListEl.addEventListener('click', async (e) => {
         const target = e.target;
         if (!target.matches('.inc-btn, .dec-btn')) return;
-        const id = parseInt(target.getAttribute('data-id'));
+        const id = target.getAttribute('data-id');
         if (!id) return;
-        const positive = await db.getPositiveById(id);
+        const positive = await getPositiveById(id);
         if (!positive) return;
         let shouldUpdate = true;
         if (target.classList.contains('inc-btn')) {
@@ -220,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 positive.score = positive.baseScore * positive.count;
             } else {
                 if (confirm("Do you wish to delete this positive?")) {
-                    await db.deletePositive(id);
+                    await deletePositive(id);
                     shouldUpdate = false;
                 } else {
                     return;
@@ -228,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         if (shouldUpdate) {
-            await db.updatePositive(positive);
+            await updatePositive(positive);
         }
         refreshHomePage();
     });
@@ -270,7 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const dateParts = dateStr.split('-');
             const formattedDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
             document.getElementById('template-day-title').textContent = `${formattedDate}'s Positives`;
-            const positives = await db.getPositivesByDate(dateStr);
+            const positives = await getPositivesByDate(dateStr);
             templateDayPositivesListEl.innerHTML = '';
             if (positives.length === 0) {
                 templateDayPositivesListEl.innerHTML = '<li>No positives for this day.</li>';
@@ -304,7 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const newPositive = {
                 name, score, date: selectedDate, baseScore: score, count: 1
             };
-            await db.addPositive(newPositive);
+            await addPositive(newPositive);
         }
         showPage(homePage);
     });
@@ -350,7 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
         const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
-        const monthPositives = await db.getPositivesByDateRange(startDate, endDate);
+        const monthPositives = await getPositivesByDateRange(startDate, endDate);
         const scoresByDate = {};
         monthPositives.forEach(p => {
             scoresByDate[p.date] = (scoresByDate[p.date] || 0) + p.score;
@@ -385,7 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             dailyLogTitleEl.textContent = `Positives for ${dateStr}`;
         }
-        const dayData = await db.getPositivesByDate(dateStr);
+        const dayData = await getPositivesByDate(dateStr);
         positivesListEl.innerHTML = '';
         if (dayData.length === 0) {
             positivesListEl.innerHTML = '<li>No positives recorded for this day.</li>';
@@ -432,7 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     endDate.setUTCDate(startDate.getUTCDate() + 6);
                     const startStr = startDate.toISOString().split('T')[0];
                     const endStr = endDate.toISOString().split('T')[0];
-                    const rangePositives = await db.getPositivesByDateRange(startStr, endStr);
+                    const rangePositives = await getPositivesByDateRange(startStr, endStr);
                     const scoresByDate = {};
                     rangePositives.forEach(p => {
                         scoresByDate[p.date] = (scoresByDate[p.date] || 0) + p.score;
@@ -456,7 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const endDate = new Date(Date.UTC(year, month + 1, 0));
                     const startStr = startDate.toISOString().split('T')[0];
                     const endStr = endDate.toISOString().split('T')[0];
-                    const rangePositives = await db.getPositivesByDateRange(startStr, endStr);
+                    const rangePositives = await getPositivesByDateRange(startStr, endStr);
                     const weeklyScores = [0, 0, 0, 0, 0];
                     rangePositives.forEach(p => {
                         const dayOfMonth = new Date(p.date + 'T00:00:00Z').getUTCDate();
@@ -478,7 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const endMonth = new Date(Date.UTC(year, 11, 31));
                     const startStr = startMonth.toISOString().split('T')[0];
                     const endStr = endMonth.toISOString().split('T')[0];
-                    const rangePositives = await db.getPositivesByDateRange(startStr, endStr);
+                    const rangePositives = await getPositivesByDateRange(startStr, endStr);
                     const monthlyScores = {};
                     const monthOrder = [];
                     for (let i = 0; i < 12; i++) {
@@ -531,7 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 0);
     };
     const populateMyTemplates = async () => {
-        myTemplates = await db.getAllCustomTemplates();
+        myTemplates = await getAllCustomTemplates();
     };
     const isDateEditable = (dateStr) => {
         const today = new Date();
@@ -548,7 +570,7 @@ document.addEventListener('DOMContentLoaded', () => {
         addPositiveBtnHome.disabled = !isDateEditable(selectedDate);
     };
     const initializeUseTemplatePage = async () => {
-        const allPositives = await db.getAllPositives();
+        const allPositives = await getAllPositives();
 
         // Calculate usage counts
         const positiveCounts = allPositives.reduce((acc, p) => {
@@ -633,9 +655,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initial Load ---
     const init = async () => {
-        await db.open();
-        populateMainSelectors();
-        await populateMyTemplates();
+        const registerErrorEl = document.getElementById('register-error');
+        const loginErrorEl = document.getElementById('login-error');
+
+        onAuthStateChange(async (user) => {
+            if (user) {
+                signoutBtn.classList.remove('hidden');
+                showPage(homePage);
+                populateMainSelectors();
+                await populateMyTemplates();
+                updateButtonStates();
+            } else {
+                signoutBtn.classList.add('hidden');
+                showPage(authPage);
+            }
+        });
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            registerErrorEl.textContent = '';
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const { error } = await registerUser(email, password);
+            if (error) {
+                registerErrorEl.textContent = error.message;
+            }
+        });
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            loginErrorEl.textContent = '';
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const { error } = await loginUser(email, password);
+            if (error) {
+                loginErrorEl.textContent = error.message;
+            }
+        });
+
+        signoutBtn.addEventListener('click', async () => {
+            await logoutUser();
+        });
+
         setupDropdown(positiveTemplatesInput, standardTemplatesOptions, () => standardTemplates, (value) => {
             const hasText = value.trim() !== '';
             positiveNameInput.disabled = hasText;
@@ -651,8 +712,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 difficultyValue.textContent = selectedTemplate.score;
             }
         });
-        showPage(homePage);
-        updateButtonStates();
     };
 
     init();
