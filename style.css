@@ -491,6 +491,20 @@ section {
     margin: 0 0 0.5rem 0;
 }
 
+.close-tooltip {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #aaa;
+    cursor: pointer;
+}
+
+.close-tooltip:hover {
+    color: #333;
+}
+
 .form-buttons {
     display: flex;
     justify-content: flex-end;
@@ -600,5 +614,13 @@ section {
 
     .use-template-container {
         flex-direction: column;
+    }
+
+    .tooltip {
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 400px;
     }
 }

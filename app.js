@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const difficultyValue = document.getElementById('difficulty-value');
     const difficultyHelpIcon = document.getElementById('difficulty-help-icon');
     const difficultyTooltip = document.getElementById('difficulty-tooltip');
+    const closeTooltipBtn = document.getElementById('close-tooltip-btn');
     const positiveNameInput = document.getElementById('positive-name');
     const positiveTemplatesInput = document.getElementById('positive-templates-input');
     const standardTemplatesOptions = document.getElementById('standard-templates-options');
@@ -137,6 +138,10 @@ document.addEventListener('DOMContentLoaded', () => {
     difficultyHelpIcon.addEventListener('click', (e) => {
         e.stopPropagation(); // Prevent the document click listener from firing
         difficultyTooltip.classList.toggle('visible');
+    });
+
+    closeTooltipBtn.addEventListener('click', () => {
+        difficultyTooltip.classList.remove('visible');
     });
 
     // --- Custom Dropdown Logic ---
