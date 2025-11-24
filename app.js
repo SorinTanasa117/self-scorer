@@ -370,19 +370,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const firstDay = new Date(Date.UTC(year, month, 1)).getUTCDay();
         const emptyCells = (firstDay === 0) ? 6 : firstDay - 1;
         for (let i = 0; i < emptyCells; i++) {
-            calendarEl.appendChild(document.createElement('div'));
+            const emptyCell = document.createElement('div');
+            emptyCell.classList.add('day');
+            calendarEl.appendChild(emptyCell);
         }
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
         const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
-        const monthPositives = await getPositivesByDateRange(startDate, endDate);
+        let monthPositives = [];
+        try {
+            monthPositives = await getPositivesByDateRange(startDate, endDate);
+        } catch (error) {
+            console.error("Could not fetch calendar data. Rendering empty calendar.", error);
+        }
         const scoresByDate = {};
         monthPositives.forEach(p => {
             scoresByDate[p.date] = (scoresByDate[p.date] || 0) + p.score;
         });
         for (let i = 1; i <= daysInMonth; i++) {
             const dayCell = document.createElement('button');
-            dayCell.classList.add('calendar-day');
+            dayCell.classList.add('calendar-day', 'day');
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
             dayCell.dataset.date = dateStr;
             let dayContent = `<span class="day-number">${i}</span>`;
@@ -666,8 +673,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateButtonStates();
                 await refreshHomePage();
             } else {
-                // User is signed out.
-                window.location.href = 'login.html';
+                // User is signed out, but we still render the calendar.
+                populateMainSelectors();
+                updateButtonStates();
+                await refreshHomePage();
             }
         });
 
