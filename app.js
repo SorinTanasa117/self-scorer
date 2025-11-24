@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     // --- Page Navigation & UI Updates ---
-    const showPage = (pageToShow) => {
+    const showPage = async (pageToShow) => {
         [homePage, addPositivePage, useTemplatePage].forEach(page => {
             if (page === pageToShow) {
                 page.classList.remove('hidden');
@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         if (pageToShow === homePage) {
-            refreshHomePage();
+            await refreshHomePage();
         }
     };
 
@@ -93,11 +93,11 @@ document.addEventListener('DOMContentLoaded', () => {
         difficultySlider.disabled = false;
     };
 
-    const refreshHomePage = () => {
-        renderCalendar(currentMonth, currentYear);
-        renderPositivesForDay(selectedDate);
+    const refreshHomePage = async () => {
+        await renderCalendar(currentMonth, currentYear);
+        await renderPositivesForDay(selectedDate);
         const activeRange = document.querySelector('.toggle-btn.active').dataset.range;
-        renderChart(activeRange);
+        await renderChart(activeRange);
     };
 
     // --- Event Listeners ---
@@ -106,21 +106,21 @@ document.addEventListener('DOMContentLoaded', () => {
         showPage(useTemplatePage);
         initializeUseTemplatePage();
     });
-    cancelPositiveBtn.addEventListener('click', () => showPage(homePage));
-    cancelFromTemplateBtn.addEventListener('click', () => showPage(homePage));
+    cancelPositiveBtn.addEventListener('click', async () => await showPage(homePage));
+    cancelFromTemplateBtn.addEventListener('click', async () => await showPage(homePage));
 
-    monthSelector.addEventListener('change', () => {
+    monthSelector.addEventListener('change', async () => {
         currentMonth = parseInt(monthSelector.value, 10);
         selectedDate = new Date(Date.UTC(currentYear, currentMonth, 1)).toISOString().split('T')[0];
         updateButtonStates();
-        refreshHomePage();
+        await refreshHomePage();
     });
 
-    yearSelector.addEventListener('change', () => {
+    yearSelector.addEventListener('change', async () => {
         currentYear = parseInt(yearSelector.value, 10);
         selectedDate = new Date(Date.UTC(currentYear, currentMonth, 1)).toISOString().split('T')[0];
         updateButtonStates();
-        refreshHomePage();
+        await refreshHomePage();
     });
 
     difficultySlider.addEventListener('input', () => {
@@ -197,12 +197,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // Update existing template
             existingTemplate.score = score;
             await updateCustomTemplate(existingTemplate);
-            alert(`Template "" updated!`);
+            alert(`Template "${name}" updated!`);
         } else {
             // Add new template
             const newTemplate = { name, score };
             await addCustomTemplate(newTemplate);
-            alert(`Template "" saved!`);
+            alert(`Template "${name}" saved!`);
         }
         await populateMyTemplates();
     });
@@ -214,12 +214,18 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("Please provide a name or select a template.");
             return;
         }
-        const newPositive = {
+        const newPositiveData = {
             name: name, date: selectedDate, score: parseInt(difficultySlider.value, 10),
             baseScore: parseInt(difficultySlider.value, 10), count: 1
         };
-        await addPositive(newPositive);
-        showPage(homePage);
+        console.log('Adding new positive:', newPositiveData);
+        const newPositive = await addPositive(newPositiveData);
+        console.log('Added new positive:', newPositive);
+        if (newPositive && !newPositive.error) {
+            await showPage(homePage);
+        } else {
+            alert('Failed to add positive. Please try again.');
+        }
     });
 
     positivesListEl.addEventListener('click', async (e) => {
@@ -249,27 +255,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (shouldUpdate) {
             await updatePositive(positive);
         }
-        refreshHomePage();
+        await refreshHomePage();
     });
 
-    calendarEl.addEventListener('click', (e) => {
+    calendarEl.addEventListener('click', async (e) => {
         const dayCell = e.target.closest('.calendar-day');
         if (dayCell && dayCell.dataset.date) {
             selectedDate = dayCell.dataset.date;
             updateButtonStates();
-            renderPositivesForDay(selectedDate);
-            renderCalendar(currentMonth, currentYear);
+            await renderPositivesForDay(selectedDate);
+            await renderCalendar(currentMonth, currentYear);
             const activeRange = document.querySelector('.toggle-btn.active').dataset.range;
-            renderChart(activeRange);
+            await renderChart(activeRange);
         }
     });
 
     document.querySelectorAll('.toggle-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', async (e) => {
             document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
             const range = e.target.getAttribute('data-range');
-            renderChart(range);
+            await renderChart(range);
         });
     });
 
@@ -297,7 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             positives.forEach(p => {
                 const li = document.createElement('li');
-                li.innerHTML = `<label><input type="checkbox" data-name="" data-score=""> </label>`;
+                li.innerHTML = `<label><input type="checkbox" data-name="${p.name}" data-score="${p.score}"> ${p.name}</label>`;
                 templateDayPositivesListEl.appendChild(li);
             });
         }
@@ -405,6 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
             dailyLogTitleEl.textContent = `Positives for ${dateStr}`;
         }
         const dayData = await getPositivesByDate(dateStr);
+        console.log(`Rendering positives for ${dateStr}:`, dayData);
         positivesListEl.innerHTML = '';
         if (dayData.length === 0) {
             positivesListEl.innerHTML = '<li>No positives recorded for this day.</li>';
@@ -416,14 +423,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const stars = '★'.repeat(item.count);
             li.innerHTML = `
                 <div class="positive-item-main">
-                    <span class="positive-name"></span>
+                    <span class="positive-name">${item.name}</span>
                     <span class="positive-stars">${stars}</span>
                 </div>
                 <div class="positive-item-controls">
-                    <span class="difficulty-label">Difficulty: </span>
+                    <span class="difficulty-label">Difficulty: ${item.baseScore}</span>
                     <div class="score-controls">
-                        <button data-id="" class="inc-btn" ${!editable ? 'disabled' : ''}>+</button>
-                        <button data-id="" class="dec-btn" ${!editable ? 'disabled' : ''}>-</button>
+                        <button data-id="${item.id}" class="inc-btn" ${!editable ? 'disabled' : ''}>+</button>
+                        <button data-id="${item.id}" class="dec-btn" ${!editable ? 'disabled' : ''}>-</button>
                     </div>
                 </div>
             `;
@@ -434,9 +441,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (myChart) {
             myChart.destroy();
         }
-        setTimeout(async () => {
-            const labels = [];
-            const chartData = [];
+        const labels = [];
+        const chartData = [];
             let maxScore = 0;
             let legendLabel = 'Score';
             switch (range) {
@@ -547,7 +553,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             });
-        }, 0);
     };
     const populateMyTemplates = async () => {
         myTemplates = await getAllCustomTemplates();
@@ -589,8 +594,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const li = document.createElement('li');
                 li.innerHTML = `
                     <label>
-                        <input type="checkbox" data-name="" data-score="">
-                        (Score: ) - Used:  time(s)
+                        <input type="checkbox" data-name="${p.name}" data-score="${p.score}">
+                        ${p.name} (Score: ${p.score}) - Used: ${p.usageCount} time(s)
                     </label>`;
                 templateMasterListEl.appendChild(li);
             });
@@ -653,12 +658,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Initial Load ---
     const init = async () => {
         onAuthStateChange(async (user) => {
+            document.body.classList.remove('loading');
             if (user) {
                 // User is signed in.
                 populateMainSelectors();
                 await populateMyTemplates();
                 updateButtonStates();
-                refreshHomePage();
+                await refreshHomePage();
             } else {
                 // User is signed out.
                 window.location.href = 'login.html';
