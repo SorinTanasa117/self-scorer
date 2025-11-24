@@ -1,11 +1,11 @@
 import {
     onAuthStateChange,
-    registerUser,
-    loginUser,
     logoutUser,
     addPositive,
     getAllPositives,
     getPositiveById,
+    getPositivesByDate,
+    getPositivesByDateRange,
     updatePositive,
     deletePositive,
     addCustomTemplate,
@@ -17,13 +17,10 @@ import {
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const homePage = document.getElementById('home-page');
-    const authPage = document.getElementById('auth-page');
     const addPositivePage = document.getElementById('add-positive-page');
     const useTemplatePage = document.getElementById('use-template-page');
 
     // Auth
-    const registerForm = document.getElementById('register-form');
-    const loginForm = document.getElementById('login-form');
     const signoutBtn = document.getElementById('signout-btn');
 
     // Home Page
@@ -75,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Page Navigation & UI Updates ---
     const showPage = (pageToShow) => {
-        [homePage, authPage, addPositivePage, useTemplatePage].forEach(page => {
+        [homePage, addPositivePage, useTemplatePage].forEach(page => {
             if (page === pageToShow) {
                 page.classList.remove('hidden');
             } else {
@@ -200,12 +197,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // Update existing template
             existingTemplate.score = score;
             await updateCustomTemplate(existingTemplate);
-            alert(`Template "${name}" updated!`);
+            alert(`Template "" updated!`);
         } else {
             // Add new template
             const newTemplate = { name, score };
             await addCustomTemplate(newTemplate);
-            alert(`Template "${name}" saved!`);
+            alert(`Template "" saved!`);
         }
         await populateMyTemplates();
     });
@@ -300,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             positives.forEach(p => {
                 const li = document.createElement('li');
-                li.innerHTML = `<label><input type="checkbox" data-name="${p.name}" data-score="${p.score}"> ${p.name}</label>`;
+                li.innerHTML = `<label><input type="checkbox" data-name="" data-score=""> </label>`;
                 templateDayPositivesListEl.appendChild(li);
             });
         }
@@ -419,14 +416,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const stars = '★'.repeat(item.count);
             li.innerHTML = `
                 <div class="positive-item-main">
-                    <span class="positive-name">${item.name}</span>
+                    <span class="positive-name"></span>
                     <span class="positive-stars">${stars}</span>
                 </div>
                 <div class="positive-item-controls">
-                    <span class="difficulty-label">Difficulty: ${item.baseScore}</span>
+                    <span class="difficulty-label">Difficulty: </span>
                     <div class="score-controls">
-                        <button data-id="${item.id}" class="inc-btn" ${!editable ? 'disabled' : ''}>+</button>
-                        <button data-id="${item.id}" class="dec-btn" ${!editable ? 'disabled' : ''}>-</button>
+                        <button data-id="" class="inc-btn" ${!editable ? 'disabled' : ''}>+</button>
+                        <button data-id="" class="dec-btn" ${!editable ? 'disabled' : ''}>-</button>
                     </div>
                 </div>
             `;
@@ -592,8 +589,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const li = document.createElement('li');
                 li.innerHTML = `
                     <label>
-                        <input type="checkbox" data-name="${p.name}" data-score="${p.score}"> 
-                        ${p.name} (Score: ${p.score}) - Used: ${p.usageCount} time(s)
+                        <input type="checkbox" data-name="" data-score="">
+                        (Score: ) - Used:  time(s)
                     </label>`;
                 templateMasterListEl.appendChild(li);
             });
@@ -655,41 +652,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initial Load ---
     const init = async () => {
-        const registerErrorEl = document.getElementById('register-error');
-        const loginErrorEl = document.getElementById('login-error');
-
         onAuthStateChange(async (user) => {
             if (user) {
-                signoutBtn.classList.remove('hidden');
-                showPage(homePage);
+                // User is signed in.
                 populateMainSelectors();
                 await populateMyTemplates();
                 updateButtonStates();
+                refreshHomePage();
             } else {
-                signoutBtn.classList.add('hidden');
-                showPage(authPage);
-            }
-        });
-
-        registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            registerErrorEl.textContent = '';
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-            const { error } = await registerUser(email, password);
-            if (error) {
-                registerErrorEl.textContent = error.message;
-            }
-        });
-
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            loginErrorEl.textContent = '';
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            const { error } = await loginUser(email, password);
-            if (error) {
-                loginErrorEl.textContent = error.message;
+                // User is signed out.
+                window.location.href = 'login.html';
             }
         });
 

@@ -207,6 +207,21 @@ section {
     min-height: 1.2em; /* Reserve space to prevent layout shift */
 }
 
+.auth-switch {
+    text-align: center;
+    margin-top: 1.5rem;
+}
+
+.auth-switch a {
+    color: #3498db;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.auth-switch a:hover {
+    text-decoration: underline;
+}
+
 /* Daily Log */
 .daily-log {
     margin-top: 2rem;
