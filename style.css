@@ -451,27 +451,44 @@ section {
     box-sizing: border-box;
 }
 
-.difficulty-slider {
-    position: relative;
+.form-group {
+    position: relative; /* Needed for tooltip positioning */
+}
+
+.help-icon {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    background-color: #3498db;
+    color: white;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 20px;
+    cursor: pointer;
+    margin-left: 10px;
+    font-weight: bold;
 }
 
 .tooltip {
-    display: none;
+    display: none; /* Hidden by default */
     position: absolute;
-    background-color: #333;
-    color: #fff;
-    padding: 1rem;
-    border-radius: 5px;
-    bottom: 125%;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 0;
+    left: calc(100% + 15px); /* Position to the right of the form group */
     width: 300px;
-    z-index: 10;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 100;
 }
 
-.difficulty-slider:hover .tooltip {
+.tooltip.visible {
     display: block;
+}
+
+.tooltip p {
+    margin: 0 0 0.5rem 0;
 }
 
 .form-buttons {
