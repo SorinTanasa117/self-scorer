@@ -9,10 +9,46 @@
 <body>
     <header>
         <h1>Self-Appreciation</h1>
+        <button id="signout-btn" class="hidden">Sign Out</button>
     </header>
 
     <main>
-        <section id="home-page">
+        <section id="auth-page">
+            <div class="auth-container">
+                <div class="auth-form">
+                    <h3>Register</h3>
+                    <form id="register-form">
+                        <div class="form-group">
+                            <label for="register-email">Email</label>
+                            <input type="email" id="register-email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-password">Password</label>
+                            <input type="password" id="register-password" required>
+                        </div>
+                        <button type="submit">Register</button>
+                        <p class="error-message" id="register-error"></p>
+                    </form>
+                </div>
+                <div class="auth-form">
+                    <h3>Login</h3>
+                    <form id="login-form">
+                        <div class="form-group">
+                            <label for="login-email">Email</label>
+                            <input type="email" id="login-email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password">Password</label>
+                            <input type="password" id="login-password" required>
+                        </div>
+                        <button type="submit">Login</button>
+                        <p class="error-message" id="login-error"></p>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <section id="home-page" class="hidden">
             <div class="global-controls">
                 <select id="month-selector"></select>
                 <select id="year-selector"></select>
@@ -110,7 +146,7 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="db.js"></script>
-    <script src="script.js"></script>
+    <script type="module" src="auth.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
