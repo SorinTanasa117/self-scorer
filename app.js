@@ -242,9 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: name, date: selectedDate, score: parseInt(difficultySlider.value, 10),
             baseScore: parseInt(difficultySlider.value, 10), count: 1
         };
-        console.log('Adding new positive:', newPositiveData);
         const newPositive = await addPositive(newPositiveData);
-        console.log('Added new positive:', newPositive);
         if (newPositive && !newPositive.error) {
             await showPage(homePage);
         } else {
@@ -456,7 +454,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         const dayData = await getPositivesByDate(dateStr);
-        console.log(`Rendering positives for ${dateStr}:`, dayData);
         positivesListEl.innerHTML = '';
         if (dayData.length === 0) {
             positivesListEl.innerHTML = '<li>No positives recorded for this day.</li>';
