@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const positivesListEl = document.getElementById('positives-list');
     const dailyLogTitleEl = document.getElementById('daily-log-title');
     const chartCanvas = document.getElementById('progress-chart');
+    const verbChartCanvas = document.getElementById('verb-chart');
 
     // Add Positive Page
     const addPositiveForm = document.getElementById('add-positive-form');
@@ -68,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let templatePageMonth = currentMonth;
     let templatePageYear = currentYear;
     let myChart;
+    let verbChart;
     let myTemplates = [];
 
     // --- Templates ---
@@ -107,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await renderPositivesForDay(selectedDate);
         const activeRange = document.querySelector('.toggle-btn.active').dataset.range;
         await renderChart(activeRange);
+        await renderVerbChart();
     };
 
     // --- Event Listeners ---
@@ -598,6 +601,124 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     };
+
+    const renderVerbChart = async () => {
+        if (verbChart) {
+            verbChart.destroy();
+        }
+
+        if (!currentUser) {
+            return;
+        }
+
+        const allPositives = await getAllPositives();
+        const actionData = {};
+
+        // Verbs that are too generic to be useful as actions on their own.
+        const uninformativeVerbs = new Set([
+            'is', 'am', 'are', 'was', 'were', 'be', 'being', 'been',
+            'have', 'has', 'had', 'do', 'does', 'did', 'a', 'an', 'the',
+            'add', 'added', 'adding', 'increasing', 'sharing', 'shared', 'stayed'
+        ]);
+
+        allPositives.forEach(p => {
+            const doc = window.nlp(p.name);
+            let bestMatch = '';
+
+            // More detailed patterns to find meaningful phrases.
+            // Ordered from most specific/longest to least specific.
+            const patterns = [
+                '#Verb+ #Preposition #Noun+', // e.g., "walked to the store"
+                '#Verb+ #Noun+ #Preposition #Noun+', // e.g., "took the dog for a walk"
+                '#Verb+ #Gerund+ #Noun+', // e.g., "went running in the park"
+                '#Verb+ #Adjective+ #Noun+', // e.g., "ate a healthy meal"
+                '#Verb+ #Noun+', // e.g., "read a book"
+                '#Verb+ #Gerund+', // e.g., "went dancing"
+                '#Verb+ #Adverb+', // e.g., "worked diligently"
+                '#Verb+ #Adjective+' // e.g., "felt happy"
+            ];
+
+            let potentialMatches = [];
+            for (const pattern of patterns) {
+                const matches = doc.match(pattern);
+                if (matches.found) {
+                    // Add all found phrases for this pattern to our list
+                    matches.forEach(match => {
+                        potentialMatches.push(match.text('normal'));
+                    });
+                }
+            }
+
+            // Prioritize the longest, most descriptive match.
+            if (potentialMatches.length > 0) {
+                bestMatch = potentialMatches.reduce((longest, current) => {
+                    return current.length > longest.length ? current : longest;
+                }, '');
+            }
+
+            // Fallback: if no pattern matched, find the main verb, but check against the blacklist.
+            if (!bestMatch) {
+                const verbs = doc.verbs().filter(v => !v.has('#Auxiliary'));
+                if (verbs.found) {
+                    const firstVerb = verbs.first().text('normal');
+                    if (!uninformativeVerbs.has(firstVerb)) {
+                        bestMatch = firstVerb;
+                    }
+                }
+            }
+
+            // Final fallback: if the main verb was uninformative, just use the whole phrase.
+            if (!bestMatch) {
+                 bestMatch = p.name;
+            }
+
+            if (bestMatch) {
+                if (!actionData[bestMatch]) {
+                    actionData[bestMatch] = { totalScore: 0, count: 0 };
+                }
+                actionData[bestMatch].totalScore += p.score;
+                actionData[bestMatch].count++;
+            }
+        });
+
+        const chartData = Object.keys(actionData).map(action => ({
+            x: actionData[action].totalScore,
+            y: actionData[action].count,
+            r: Math.sqrt(actionData[action].count) * 5,
+            action: action
+        }));
+
+        verbChart = new Chart(verbChartCanvas, {
+            type: 'bubble',
+            data: {
+                datasets: [{
+                    label: 'Action Analysis (Score vs. Count)', // Updated label
+                    data: chartData,
+                    backgroundColor: 'rgba(231, 76, 60, 0.5)',
+                    borderColor: '#e74c3c',
+                }]
+            },
+            options: {
+                scales: {
+                    x: { beginAtZero: true, title: { display: true, text: 'Total Score' } },
+                    y: { beginAtZero: true, title: { display: true, text: 'Number of Actions' } }
+                },
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const dataPoint = context.raw;
+                                return `${dataPoint.action}: ${dataPoint.y} actions, ${dataPoint.x} total score`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    };
+
     const populateMyTemplates = async () => {
         if (!currentUser) return;
         myTemplates = await getAllCustomTemplates();
