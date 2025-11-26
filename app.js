@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const positivesListEl = document.getElementById('positives-list');
     const dailyLogTitleEl = document.getElementById('daily-log-title');
     const chartCanvas = document.getElementById('progress-chart');
+    const categoryChartCanvas = document.getElementById('category-chart');
 
     // Add Positive Page
     const addPositiveForm = document.getElementById('add-positive-form');
@@ -68,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let templatePageMonth = currentMonth;
     let templatePageYear = currentYear;
     let myChart;
+    let categoryChart;
     let myTemplates = [];
 
     // --- Templates ---
@@ -107,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await renderPositivesForDay(selectedDate);
         const activeRange = document.querySelector('.toggle-btn.active').dataset.range;
         await renderChart(activeRange);
+        await renderCategoryChart();
     };
 
     // --- Event Listeners ---
@@ -598,6 +601,98 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     };
+
+    const renderCategoryChart = async () => {
+        if (categoryChart) {
+            categoryChart.destroy();
+        }
+
+        if (!currentUser) {
+            return;
+        }
+
+        const lifeCategories = {
+            'Mental Health': ['meditation', 'psychologist', 'therapy', 'journaling', 'mindfulness', 'relaxing'],
+            'Physical Health': ['gym', 'dancing', 'run', 'exercise', 'workout', 'healthy meal', 'yoga', 'sport'],
+            'Professional': ['work project', 'work', 'career', 'meeting', 'presentation', 'task at work'],
+            'Fulfillment': ['hobby', 'coding', 'vybe', 'app', 'passion project', 'creative', 'art', 'music'],
+            'Social': ['friends', 'family', 'partner', 'lover', 'party', 'social event', 'call with'],
+            'General': []
+        };
+
+        const allPositives = await getAllPositives();
+        const categoryData = {};
+
+        // Initialize category data
+        Object.keys(lifeCategories).forEach(cat => {
+            categoryData[cat] = { totalScore: 0, count: 0 };
+        });
+
+        allPositives.forEach(p => {
+            const positiveText = p.name.toLowerCase();
+            let assignedCategory = 'General'; // Default category
+
+            for (const category in lifeCategories) {
+                if (category === 'General') continue;
+                for (const keyword of lifeCategories[category]) {
+                    if (positiveText.includes(keyword)) {
+                        assignedCategory = category;
+                        break;
+                    }
+                }
+                if (assignedCategory !== 'General') {
+                    break;
+                }
+            }
+
+            categoryData[assignedCategory].totalScore += p.score;
+            categoryData[assignedCategory].count++;
+        });
+
+        const chartData = Object.keys(categoryData).filter(cat => categoryData[cat].count > 0).map(category => ({
+            x: categoryData[category].totalScore,
+            y: categoryData[category].count,
+            r: Math.sqrt(categoryData[category].count) * 8, // Slightly larger radius for better visibility
+            category: category
+        }));
+
+        const ctx = categoryChartCanvas.getContext('2d');
+        if (!ctx) {
+            console.error("Failed to get 2D context from canvas");
+            return;
+        }
+
+        categoryChart = new Chart(ctx, {
+            type: 'bubble',
+            data: {
+                datasets: [{
+                    label: 'Life Area Analysis (Total Score vs. Frequency)',
+                    data: chartData,
+                    backgroundColor: 'rgba(52, 152, 219, 0.6)',
+                    borderColor: '#3498db',
+                }]
+            },
+            options: {
+                scales: {
+                    x: { beginAtZero: true, title: { display: true, text: 'Total Score in Category' } },
+                    y: { beginAtZero: true, title: { display: true, text: 'Number of Entries' } }
+                },
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const dataPoint = context.raw;
+                                return `${dataPoint.category}: ${dataPoint.y} entries, ${dataPoint.x} total score`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    };
+
     const populateMyTemplates = async () => {
         if (!currentUser) return;
         myTemplates = await getAllCustomTemplates();
