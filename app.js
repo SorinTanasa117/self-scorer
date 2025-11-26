@@ -81,30 +81,6 @@ const renderApp = async () => {
 
 
 // --- Rendering & Helper Functions ---
-const splitLabel = (label, maxLength = 20) => {
-    const words = label.split(' ');
-    if (words.length === 1) { // If only one word, just return it as a single line array
-        return [label];
-    }
-
-    const lines = [];
-    let currentLine = '';
-
-    words.forEach(word => {
-        if ((currentLine + word).length > maxLength && currentLine.length > 0) {
-            lines.push(currentLine.trim());
-            currentLine = '';
-        }
-        currentLine += word + ' ';
-    });
-
-    if (currentLine.trim().length > 0) {
-        lines.push(currentLine.trim());
-    }
-
-    return lines;
-};
-
 const populateMainSelectors = () => {
     const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     monthSelector.innerHTML = '';
@@ -585,7 +561,7 @@ const renderLifestyleDrilldown = (categoryData) => {
 
     uniqueTasks.sort((a, b) => b.totalScore - a.totalScore);
 
-    const labels = uniqueTasks.map(p => splitLabel(p.name));
+    const labels = uniqueTasks.map(p => p.name);
     const scores = uniqueTasks.map(p => p.totalScore);
     const baseColor = categoryColors[categoryData.category] || 'rgba(149, 165, 166, 0.7)';
     const colors = Array(labels.length).fill(baseColor);
@@ -631,7 +607,7 @@ const renderLifestyleDrilldown = (categoryData) => {
 };
 
 const showTaskDetailPopup = (taskData) => {
-    taskDetailTitle.innerHTML = `<span class="popup-title-prefix">Details for</span> ${taskData.name}`;
+    taskDetailTitle.textContent = `Details for ${taskData.name}`;
     const content = `
         <p><strong>Times Done:</strong> ${taskData.count}</p>
         <p><strong>Total Score:</strong> ${taskData.totalScore}</p>
@@ -944,6 +920,52 @@ document.addEventListener('DOMContentLoaded', () => {
             await renderProgressChart(range);
             await renderLifestyleChart();
         });
+    };
+
+    positiveNameInput.addEventListener('input', () => {
+        const hasText = positiveNameInput.value.trim() !== '';
+        positiveTemplatesInput.disabled = hasText;
+        myPositiveTemplatesInput.disabled = hasText;
+    });
+
+    saveTemplateBtn.addEventListener('click', async () => {
+        const name = myPositiveTemplatesInput.value.trim() || positiveNameInput.value.trim();
+        const score = parseInt(difficultySlider.value, 10);
+
+        if (!name) {
+            alert('Please enter a name for your new template, or select an existing template to update.');
+            return;
+        }
+
+        const existingTemplate = await getCustomTemplateByName(name);
+
+        if (existingTemplate) {
+            existingTemplate.score = score;
+            await updateCustomTemplate(existingTemplate);
+            alert(`Template "${name}" updated!`);
+        } else {
+            const newTemplate = { name, score };
+            await addCustomTemplate(newTemplate);
+            alert(`Template "${name}" saved!`);
+        }
+        await populateMyTemplates();
+    });
+
+    setupDropdown(positiveTemplatesInput, standardTemplatesOptions, () => standardTemplates, (value) => {
+        const hasText = value.trim() !== '';
+        positiveNameInput.disabled = hasText;
+        myPositiveTemplatesInput.disabled = hasText;
+    });
+
+    setupDropdown(myPositiveTemplatesInput, myTemplatesOptions, () => myTemplates, (value) => {
+        const hasText = value.trim() !== '';
+        positiveNameInput.disabled = hasText;
+        positiveTemplatesInput.disabled = hasText;
+        const selectedTemplate = myTemplates.find(t => t.name === value);
+        if (selectedTemplate) {
+            difficultySlider.value = selectedTemplate.score;
+            difficultyValue.textContent = selectedTemplate.score;
+        }
     });
 
     signoutBtn.addEventListener('click', async () => {
