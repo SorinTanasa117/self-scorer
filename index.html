@@ -42,13 +42,22 @@
                     <canvas id="progress-chart"></canvas>
                 </div>
                 <h3>Lifestyle Analysis</h3>
-                <div class="chart-wrapper">
+                <div id="verb-chart-container" class="chart-wrapper">
                     <canvas id="verb-chart"></canvas>
+                    <div id="verb-chart-drilldown" class="hidden"></div>
                 </div>
             </div>
 
             <button id="add-positive-btn-home" class="add-positive-btn">+</button>
         </section>
+
+        <div id="task-detail-popup" class="popup-container hidden">
+            <div class="popup-content">
+                <span id="close-task-popup-btn" class="close-popup-btn">&times;</span>
+                <h3 id="task-detail-title"></h3>
+                <p id="task-detail-stats"></p>
+            </div>
+        </div>
 
         <section id="use-template-page" class="hidden">
             <h2>Reuse Past Positives</h2>
