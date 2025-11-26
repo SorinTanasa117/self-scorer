@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const positivesListEl = document.getElementById('positives-list');
     const dailyLogTitleEl = document.getElementById('daily-log-title');
     const chartCanvas = document.getElementById('progress-chart');
-    const categoryChartCanvas = document.getElementById('category-chart');
+    const verbChartCanvas = document.getElementById('verb-chart');
 
     // Add Positive Page
     const addPositiveForm = document.getElementById('add-positive-form');
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let templatePageMonth = currentMonth;
     let templatePageYear = currentYear;
     let myChart;
-    let categoryChart;
+    let verbChart;
     let myTemplates = [];
 
     // --- Templates ---
@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await renderPositivesForDay(selectedDate);
         const activeRange = document.querySelector('.toggle-btn.active').dataset.range;
         await renderChart(activeRange);
-        await renderCategoryChart();
+        await renderVerbChart();
     };
 
     // --- Event Listeners ---
@@ -602,80 +602,64 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const renderCategoryChart = async () => {
-        if (categoryChart) {
-            categoryChart.destroy();
+    const renderVerbChart = async () => {
+        if (verbChart) {
+            verbChart.destroy();
         }
 
         if (!currentUser) {
             return;
         }
 
-        const lifeCategories = {
-            'Mental Health': ['meditation', 'psychologist', 'therapy', 'journaling', 'mindfulness', 'relaxing'],
-            'Physical Health': ['gym', 'dancing', 'run', 'exercise', 'workout', 'healthy meal', 'yoga', 'sport'],
-            'Professional': ['work project', 'work', 'career', 'meeting', 'presentation', 'task at work'],
-            'Fulfillment': ['hobby', 'coding', 'vybe', 'app', 'passion project', 'creative', 'art', 'music'],
-            'Social': ['friends', 'family', 'partner', 'lover', 'party', 'social event', 'call with'],
-            'General': []
-        };
-
         const allPositives = await getAllPositives();
-        const categoryData = {};
-
-        // Initialize category data
-        Object.keys(lifeCategories).forEach(cat => {
-            categoryData[cat] = { totalScore: 0, count: 0 };
-        });
+        const verbData = {};
 
         allPositives.forEach(p => {
-            const positiveText = p.name.toLowerCase();
-            let assignedCategory = 'General'; // Default category
-
-            for (const category in lifeCategories) {
-                if (category === 'General') continue;
-                for (const keyword of lifeCategories[category]) {
-                    if (positiveText.includes(keyword)) {
-                        assignedCategory = category;
-                        break;
-                    }
+            const doc = window.nlp(p.name);
+            const verbs = doc.verbs().out('array');
+            verbs.forEach(verb => {
+                if (!verbData[verb]) {
+                    verbData[verb] = { totalScore: 0, count: 0, positives: [] };
                 }
-                if (assignedCategory !== 'General') {
-                    break;
-                }
-            }
-
-            categoryData[assignedCategory].totalScore += p.score;
-            categoryData[assignedCategory].count++;
+                verbData[verb].totalScore += p.score;
+                verbData[verb].count++;
+                verbData[verb].positives.push(p.name);
+            });
         });
 
-        const chartData = Object.keys(categoryData).filter(cat => categoryData[cat].count > 0).map(category => ({
-            x: categoryData[category].totalScore,
-            y: categoryData[category].count,
-            r: Math.sqrt(categoryData[category].count) * 8, // Slightly larger radius for better visibility
-            category: category
+        const chartData = Object.keys(verbData).map(verb => ({
+            x: verbData[verb].totalScore,
+            y: verbData[verb].count,
+            r: Math.sqrt(verbData[verb].count) * 5, // Bubble radius based on count
+            verb: verb
         }));
 
-        const ctx = categoryChartCanvas.getContext('2d');
-        if (!ctx) {
-            console.error("Failed to get 2D context from canvas");
-            return;
-        }
-
-        categoryChart = new Chart(ctx, {
+        verbChart = new Chart(verbChartCanvas, {
             type: 'bubble',
             data: {
                 datasets: [{
-                    label: 'Life Area Analysis (Total Score vs. Frequency)',
+                    label: 'Verb Analysis (Score vs. Count)',
                     data: chartData,
-                    backgroundColor: 'rgba(52, 152, 219, 0.6)',
-                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(231, 76, 60, 0.5)',
+                    borderColor: '#e74c3c',
                 }]
             },
             options: {
                 scales: {
-                    x: { beginAtZero: true, title: { display: true, text: 'Total Score in Category' } },
-                    y: { beginAtZero: true, title: { display: true, text: 'Number of Entries' } }
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Total Score'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Actions'
+                        }
+                    }
                 },
                 responsive: true,
                 maintainAspectRatio: false,
@@ -684,7 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         callbacks: {
                             label: function(context) {
                                 const dataPoint = context.raw;
-                                return `${dataPoint.category}: ${dataPoint.y} entries, ${dataPoint.x} total score`;
+                                return `${dataPoint.verb}: ${dataPoint.y} actions, ${dataPoint.x} total score`;
                             }
                         }
                     }
