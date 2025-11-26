@@ -612,87 +612,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const allPositives = await getAllPositives();
-        const actionData = {};
-
-        // Verbs that are too generic to be useful as actions on their own.
-        const uninformativeVerbs = new Set([
-            'is', 'am', 'are', 'was', 'were', 'be', 'being', 'been',
-            'have', 'has', 'had', 'do', 'does', 'did', 'a', 'an', 'the',
-            'add', 'added', 'adding', 'increasing', 'sharing', 'shared', 'stayed'
-        ]);
+        const verbData = {};
 
         allPositives.forEach(p => {
             const doc = window.nlp(p.name);
-            let bestMatch = '';
-
-            // More detailed patterns to find meaningful phrases.
-            // Ordered from most specific/longest to least specific.
-            const patterns = [
-                '#Verb+ #Preposition #Noun+', // e.g., "walked to the store"
-                '#Verb+ #Noun+ #Preposition #Noun+', // e.g., "took the dog for a walk"
-                '#Verb+ #Gerund+ #Noun+', // e.g., "went running in the park"
-                '#Verb+ #Adjective+ #Noun+', // e.g., "ate a healthy meal"
-                '#Verb+ #Noun+', // e.g., "read a book"
-                '#Verb+ #Gerund+', // e.g., "went dancing"
-                '#Verb+ #Adverb+', // e.g., "worked diligently"
-                '#Verb+ #Adjective+' // e.g., "felt happy"
-            ];
-
-            let potentialMatches = [];
-            for (const pattern of patterns) {
-                const matches = doc.match(pattern);
-                if (matches.found) {
-                    // Add all found phrases for this pattern to our list
-                    matches.forEach(match => {
-                        potentialMatches.push(match.text('normal'));
-                    });
+            const verbs = doc.verbs().out('array');
+            verbs.forEach(verb => {
+                if (!verbData[verb]) {
+                    verbData[verb] = { totalScore: 0, count: 0, positives: [] };
                 }
-            }
-
-            // Prioritize the longest, most descriptive match.
-            if (potentialMatches.length > 0) {
-                bestMatch = potentialMatches.reduce((longest, current) => {
-                    return current.length > longest.length ? current : longest;
-                }, '');
-            }
-
-            // Fallback: if no pattern matched, find the main verb, but check against the blacklist.
-            if (!bestMatch) {
-                const verbs = doc.verbs().filter(v => !v.has('#Auxiliary'));
-                if (verbs.found) {
-                    const firstVerb = verbs.first().text('normal');
-                    if (!uninformativeVerbs.has(firstVerb)) {
-                        bestMatch = firstVerb;
-                    }
-                }
-            }
-
-            // Final fallback: if the main verb was uninformative, just use the whole phrase.
-            if (!bestMatch) {
-                 bestMatch = p.name;
-            }
-
-            if (bestMatch) {
-                if (!actionData[bestMatch]) {
-                    actionData[bestMatch] = { totalScore: 0, count: 0 };
-                }
-                actionData[bestMatch].totalScore += p.score;
-                actionData[bestMatch].count++;
-            }
+                verbData[verb].totalScore += p.score;
+                verbData[verb].count++;
+                verbData[verb].positives.push(p.name);
+            });
         });
 
-        const chartData = Object.keys(actionData).map(action => ({
-            x: actionData[action].totalScore,
-            y: actionData[action].count,
-            r: Math.sqrt(actionData[action].count) * 5,
-            action: action
+        const chartData = Object.keys(verbData).map(verb => ({
+            x: verbData[verb].totalScore,
+            y: verbData[verb].count,
+            r: Math.sqrt(verbData[verb].count) * 5, // Bubble radius based on count
+            verb: verb
         }));
 
         verbChart = new Chart(verbChartCanvas, {
             type: 'bubble',
             data: {
                 datasets: [{
-                    label: 'Action Analysis (Score vs. Count)', // Updated label
+                    label: 'Verb Analysis (Score vs. Count)',
                     data: chartData,
                     backgroundColor: 'rgba(231, 76, 60, 0.5)',
                     borderColor: '#e74c3c',
@@ -700,8 +646,20 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             options: {
                 scales: {
-                    x: { beginAtZero: true, title: { display: true, text: 'Total Score' } },
-                    y: { beginAtZero: true, title: { display: true, text: 'Number of Actions' } }
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Total Score'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Actions'
+                        }
+                    }
                 },
                 responsive: true,
                 maintainAspectRatio: false,
@@ -710,7 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         callbacks: {
                             label: function(context) {
                                 const dataPoint = context.raw;
-                                return `${dataPoint.action}: ${dataPoint.y} actions, ${dataPoint.x} total score`;
+                                return `${dataPoint.verb}: ${dataPoint.y} actions, ${dataPoint.x} total score`;
                             }
                         }
                     }
