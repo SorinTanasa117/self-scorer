@@ -7,10 +7,10 @@
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="loading">
+<body>
     <header>
         <h1>Self-Appreciation</h1>
-        <button id="signout-btn">Sign Out</button>
+        <button id="signout-btn" class="auth-btn">Sign Out</button>
     </header>
 
     <main>
@@ -31,32 +31,30 @@
                 <ul id="positives-list"></ul>
             </div>
 
-             <div class="graph-container">
+            <div class="graph-container">
+                <h3>Progress</h3>
                 <div class="graph-toggles">
-                    <button id="progress-btn" class="toggle-btn active" data-chart="progress">Progress</button>
-                    <button id="lifestyle-btn" class="toggle-btn" data-chart="lifestyle">Lifestyle Analysis</button>
+                    <button class="toggle-btn active" data-range="week">Week</button>
+                    <button class="toggle-btn" data-range="month">Month</button>
+                    <button class="toggle-btn" data-range="year">Year</button>
                 </div>
-                <div id="progress-chart-container" class="chart-wrapper">
-                    <div class="graph-toggles">
-                        <button class="toggle-btn active" data-range="week">Week</button>
-                        <button class="toggle-btn" data-range="month">Month</button>
-                        <button class="toggle-btn" data-range="year">Year</button>
-                    </div>
+                <div class="chart-wrapper">
                     <canvas id="progress-chart"></canvas>
                 </div>
-                <div id="lifestyle-chart-container" class="chart-wrapper hidden">
+                <h3>Lifestyle Analysis</h3>
+                <div id="lifestyle-chart-container" class="chart-wrapper">
                     <canvas id="lifestyle-chart"></canvas>
                 </div>
-                <div id="verb-chart-drilldown" class="chart-wrapper hidden">
+                <div id="lifestyle-chart-drilldown" class="chart-wrapper hidden">
                      <div class="drilldown-header">
                         <h3 id="drilldown-title"></h3>
-                        <button id="back-to-verb-chart-btn" class="small-btn">Back</button>
+                        <button id="back-to-lifestyle-chart-btn" class="small-btn">Back</button>
                     </div>
                     <canvas id="drilldown-chart"></canvas>
                 </div>
             </div>
 
-            <button class="add-positive-btn">+</button>
+            <button id="add-positive-btn-home" class="add-positive-btn">+</button>
         </section>
 
         <div id="task-detail-popup" class="popup-container hidden">
