@@ -612,58 +612,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const allPositives = await getAllPositives();
-        const actionData = {}; // Using a more descriptive name
+        const verbData = {};
 
         allPositives.forEach(p => {
             const doc = window.nlp(p.name);
-            let action = null;
-
-            // Try to find the most descriptive phrase first.
-            // Match verb phrases like "went dancing" or "read a book".
-            const patterns = [
-                '#Verb+ #Gerund+',
-                '#Verb+ #Noun+',
-                '#Verb+ #Adjective',
-                '#Verb+ #Adverb'
-            ];
-
-            for (const pattern of patterns) {
-                const match = doc.match(pattern);
-                if (match.found) {
-                    action = match.first().text('normal'); // Get the normalized text of the first match
-                    break;
+            const verbs = doc.verbs().out('array');
+            verbs.forEach(verb => {
+                if (!verbData[verb]) {
+                    verbData[verb] = { totalScore: 0, count: 0, positives: [] };
                 }
-            }
-
-            // If no descriptive phrase is found, fall back to the first main verb.
-            if (!action) {
-                const verbs = doc.verbs().filter(v => !v.has('#Auxiliary')); // Exclude auxiliary verbs
-                if (verbs.found) {
-                    action = verbs.first().text('normal');
-                }
-            }
-
-            if (action) {
-                if (!actionData[action]) {
-                    actionData[action] = { totalScore: 0, count: 0 };
-                }
-                actionData[action].totalScore += p.score;
-                actionData[action].count++;
-            }
+                verbData[verb].totalScore += p.score;
+                verbData[verb].count++;
+                verbData[verb].positives.push(p.name);
+            });
         });
 
-        const chartData = Object.keys(actionData).map(action => ({
-            x: actionData[action].totalScore,
-            y: actionData[action].count,
-            r: Math.sqrt(actionData[action].count) * 5,
-            action: action // Changed from 'verb' to 'action' for clarity
+        const chartData = Object.keys(verbData).map(verb => ({
+            x: verbData[verb].totalScore,
+            y: verbData[verb].count,
+            r: Math.sqrt(verbData[verb].count) * 5, // Bubble radius based on count
+            verb: verb
         }));
 
         verbChart = new Chart(verbChartCanvas, {
             type: 'bubble',
             data: {
                 datasets: [{
-                    label: 'Action Analysis (Score vs. Count)', // Updated label
+                    label: 'Verb Analysis (Score vs. Count)',
                     data: chartData,
                     backgroundColor: 'rgba(231, 76, 60, 0.5)',
                     borderColor: '#e74c3c',
@@ -671,8 +646,20 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             options: {
                 scales: {
-                    x: { beginAtZero: true, title: { display: true, text: 'Total Score' } },
-                    y: { beginAtZero: true, title: { display: true, text: 'Number of Actions' } }
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Total Score'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Actions'
+                        }
+                    }
                 },
                 responsive: true,
                 maintainAspectRatio: false,
@@ -681,7 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         callbacks: {
                             label: function(context) {
                                 const dataPoint = context.raw;
-                                return `${dataPoint.action}: ${dataPoint.y} actions, ${dataPoint.x} total score`;
+                                return `${dataPoint.verb}: ${dataPoint.y} actions, ${dataPoint.x} total score`;
                             }
                         }
                     }
