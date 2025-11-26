@@ -607,7 +607,7 @@ const renderLifestyleDrilldown = (categoryData) => {
 };
 
 const showTaskDetailPopup = (taskData) => {
-    taskDetailTitle.innerHTML = `<span class="popup-title-prefix">Details for</span> ${taskData.name}`;
+    taskDetailTitle.textContent = `Details for ${taskData.name}`;
     const content = `
         <p><strong>Times Done:</strong> ${taskData.count}</p>
         <p><strong>Total Score:</strong> ${taskData.totalScore}</p>
