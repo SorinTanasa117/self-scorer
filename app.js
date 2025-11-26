@@ -561,7 +561,7 @@ const renderLifestyleDrilldown = (categoryData) => {
 
     uniqueTasks.sort((a, b) => b.totalScore - a.totalScore);
 
-    const labels = uniqueTasks.map(p => p.name.split(' '));
+    const labels = uniqueTasks.map(p => p.name);
     const scores = uniqueTasks.map(p => p.totalScore);
     const baseColor = categoryColors[categoryData.category] || 'rgba(149, 165, 166, 0.7)';
     const colors = Array(labels.length).fill(baseColor);
@@ -607,7 +607,7 @@ const renderLifestyleDrilldown = (categoryData) => {
 };
 
 const showTaskDetailPopup = (taskData) => {
-    taskDetailTitle.innerHTML = `<span class="popup-title-prefix">Details for</span> ${taskData.name}`;
+    taskDetailTitle.textContent = `Details for ${taskData.name}`;
     const content = `
         <p><strong>Times Done:</strong> ${taskData.count}</p>
         <p><strong>Total Score:</strong> ${taskData.totalScore}</p>

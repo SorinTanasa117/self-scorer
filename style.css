@@ -712,11 +712,6 @@ section {
 #task-detail-title {
     margin-top: 0;
     color: #2980b9;
-    word-wrap: break-word; /* Ensure long titles wrap */
-}
-
-.popup-title-prefix {
-    color: #333; /* Black color for the "Details for" text */
 }
 
 /* Keyframe Animations */
