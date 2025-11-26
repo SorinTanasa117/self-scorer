@@ -920,6 +920,52 @@ document.addEventListener('DOMContentLoaded', () => {
             await renderProgressChart(range);
             await renderLifestyleChart();
         });
+    };
+
+    positiveNameInput.addEventListener('input', () => {
+        const hasText = positiveNameInput.value.trim() !== '';
+        positiveTemplatesInput.disabled = hasText;
+        myPositiveTemplatesInput.disabled = hasText;
+    });
+
+    saveTemplateBtn.addEventListener('click', async () => {
+        const name = myPositiveTemplatesInput.value.trim() || positiveNameInput.value.trim();
+        const score = parseInt(difficultySlider.value, 10);
+
+        if (!name) {
+            alert('Please enter a name for your new template, or select an existing template to update.');
+            return;
+        }
+
+        const existingTemplate = await getCustomTemplateByName(name);
+
+        if (existingTemplate) {
+            existingTemplate.score = score;
+            await updateCustomTemplate(existingTemplate);
+            alert(`Template "${name}" updated!`);
+        } else {
+            const newTemplate = { name, score };
+            await addCustomTemplate(newTemplate);
+            alert(`Template "${name}" saved!`);
+        }
+        await populateMyTemplates();
+    });
+
+    setupDropdown(positiveTemplatesInput, standardTemplatesOptions, () => standardTemplates, (value) => {
+        const hasText = value.trim() !== '';
+        positiveNameInput.disabled = hasText;
+        myPositiveTemplatesInput.disabled = hasText;
+    });
+
+    setupDropdown(myPositiveTemplatesInput, myTemplatesOptions, () => myTemplates, (value) => {
+        const hasText = value.trim() !== '';
+        positiveNameInput.disabled = hasText;
+        positiveTemplatesInput.disabled = hasText;
+        const selectedTemplate = myTemplates.find(t => t.name === value);
+        if (selectedTemplate) {
+            difficultySlider.value = selectedTemplate.score;
+            difficultyValue.textContent = selectedTemplate.score;
+        }
     });
 
     signoutBtn.addEventListener('click', async () => {
