@@ -547,7 +547,7 @@ const renderLifestyleDrilldown = (categoryData) => {
                 name: p.name,
                 count: 0,
                 totalScore: 0,
-                avgDifficulty: 0,
+                avgScore: 0,
                 dates: []
             });
         }
@@ -555,8 +555,7 @@ const renderLifestyleDrilldown = (categoryData) => {
         existing.count += p.count;
         existing.totalScore += p.score;
         existing.dates.push(p.date);
-        // This is a simplification; real avg would need base scores
-        existing.avgDifficulty = existing.totalScore / existing.count;
+        existing.avgScore = existing.totalScore / existing.count;
         return map;
     }, new Map()).values()];
 
@@ -769,10 +768,10 @@ document.addEventListener('DOMContentLoaded', () => {
     dailyLogTitleEl = document.getElementById('daily-log-title');
     progressChartCanvas = document.getElementById('progress-chart');
     lifestyleChartCanvas = document.getElementById('lifestyle-chart');
-    lifestyleChartDrilldownContainer = document.getElementById('verb-chart-drilldown');
+    lifestyleChartDrilldownContainer = document.getElementById('lifestyle-chart-drilldown');
     drilldownTitle = document.getElementById('drilldown-title');
     drilldownChartCanvas = document.getElementById('drilldown-chart');
-    backToLifestyleChartBtn = document.getElementById('back-to-verb-chart-btn');
+    backToLifestyleChartBtn = document.getElementById('back-to-lifestyle-chart-btn');
     taskDetailPopup = document.getElementById('task-detail-popup');
     closeTaskDetailPopupBtn = document.getElementById('close-task-popup-btn');
     taskDetailTitle = document.getElementById('task-detail-title');
@@ -913,30 +912,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.querySelectorAll('.graph-toggles .toggle-btn[data-range]').forEach(btn => {
+    document.querySelectorAll('.toggle-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
-            // Handle range toggles
-            document.querySelectorAll('.graph-toggles .toggle-btn[data-range]').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
             const range = e.target.getAttribute('data-range');
             await renderProgressChart(range);
             await renderLifestyleChart();
-        });
-    });
-
-    document.querySelectorAll('.graph-toggles .toggle-btn[data-chart]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            // Handle chart type toggles
-            document.querySelectorAll('.graph-toggles .toggle-btn[data-chart]').forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            const chartType = e.target.getAttribute('data-chart');
-            if (chartType === 'progress') {
-                document.getElementById('progress-chart-container').classList.remove('hidden');
-                document.getElementById('lifestyle-chart-container').classList.add('hidden');
-            } else {
-                document.getElementById('progress-chart-container').classList.add('hidden');
-                document.getElementById('lifestyle-chart-container').classList.remove('hidden');
-            }
         });
     });
 
@@ -951,6 +933,160 @@ document.addEventListener('DOMContentLoaded', () => {
     closeTaskDetailPopupBtn.addEventListener('click', () => {
         taskDetailPopup.classList.add('hidden');
     });
+
+    const standardTemplates = [
+        "Displayed affection towards a lover in public.", "Showed affection towards friends by hugging when you leave.", "Said 'thank you' to a service worker.", "Held the door open for someone.", "Completed a difficult task at work.", "Woke up on time.", "Ate a healthy meal.", "Exercised for 30 minutes.", "Read a chapter of a book.", "Learned something new.", "Helped a colleague with a problem.", "Called a family member to catch up.", "Listened to a friend without judgment.", "Forgave someone.", "Apologized for a mistake.", "Set a boundary with someone.", "Said 'no' to something you didn't want to do.", "Donated to a charity.", "Volunteered your time.", "Cleaned a part of your home.",
+    ];
+
+    const renderDropdown = (container, items) => {
+        container.innerHTML = '';
+        items.forEach(item => {
+            const optionEl = document.createElement('span');
+            optionEl.classList.add('dropdown-option');
+            optionEl.textContent = typeof item === 'string' ? item : item.name;
+            optionEl.dataset.value = typeof item === 'string' ? item : item.name;
+            container.appendChild(optionEl);
+        });
+        container.classList.add('visible');
+    };
+
+    const setupDropdown = (input, optionsContainer, getSourceArray, onSelectCallback) => {
+        input.addEventListener('focus', () => {
+            const sourceArray = getSourceArray();
+            const filtered = sourceArray.filter(item => (typeof item === 'string' ? item : item.name).toLowerCase().includes(input.value.toLowerCase()));
+            renderDropdown(optionsContainer, filtered);
+        });
+
+        input.addEventListener('input', () => {
+            const sourceArray = getSourceArray();
+            const filtered = sourceArray.filter(item => (typeof item === 'string' ? item : item.name).toLowerCase().includes(input.value.toLowerCase()));
+            renderDropdown(optionsContainer, filtered);
+            if (onSelectCallback) {
+                onSelectCallback(input.value);
+            }
+        });
+
+        optionsContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('dropdown-option')) {
+                input.value = e.target.dataset.value;
+                optionsContainer.classList.remove('visible');
+                const event = new Event('input', { bubbles: true });
+                input.dispatchEvent(event);
+            }
+        });
+    };
+
+    positiveNameInput.addEventListener('input', () => {
+        const hasText = positiveNameInput.value.trim() !== '';
+        positiveTemplatesInput.disabled = hasText;
+        myPositiveTemplatesInput.disabled = hasText;
+    });
+
+    saveTemplateBtn.addEventListener('click', async () => {
+        const name = myPositiveTemplatesInput.value.trim() || positiveNameInput.value.trim();
+        const score = parseInt(difficultySlider.value, 10);
+
+        if (!name) {
+            alert('Please enter a name for your new template, or select an existing template to update.');
+            return;
+        }
+
+        const existingTemplate = await getCustomTemplateByName(name);
+
+        if (existingTemplate) {
+            existingTemplate.score = score;
+            await updateCustomTemplate(existingTemplate);
+            alert(`Template "${name}" updated!`);
+        } else {
+            const newTemplate = { name, score };
+            await addCustomTemplate(newTemplate);
+            alert(`Template "${name}" saved!`);
+        }
+        await populateMyTemplates();
+    });
+
+    setupDropdown(positiveTemplatesInput, standardTemplatesOptions, () => standardTemplates, (value) => {
+        const hasText = value.trim() !== '';
+        positiveNameInput.disabled = hasText;
+        myPositiveTemplatesInput.disabled = hasText;
+    });
+
+    setupDropdown(myPositiveTemplatesInput, myTemplatesOptions, () => myTemplates, (value) => {
+        const hasText = value.trim() !== '';
+        positiveNameInput.disabled = hasText;
+        positiveTemplatesInput.disabled = hasText;
+        const selectedTemplate = myTemplates.find(t => t.name === value);
+        if (selectedTemplate) {
+            difficultySlider.value = selectedTemplate.score;
+            difficultyValue.textContent = selectedTemplate.score;
+        }
+    });
+
+    templateMonthSelector.addEventListener('change', () => {
+        templatePageMonth = parseInt(templateMonthSelector.value, 10);
+        renderTemplateCalendar(templatePageMonth, templatePageYear);
+    });
+
+    templateYearSelector.addEventListener('change', () => {
+        templatePageYear = parseInt(templateYearSelector.value, 10);
+        renderTemplateCalendar(templatePageMonth, templatePageYear);
+    });
+
+    templateCalendarEl.addEventListener('click', async (e) => {
+        const dayCell = e.target.closest('.calendar-day');
+        if (dayCell && dayCell.dataset.date) {
+            const dateStr = dayCell.dataset.date;
+            const dateParts = dateStr.split('-');
+            const formattedDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+            document.getElementById('template-day-title').textContent = `${formattedDate}'s Positives`;
+            const positives = await getPositivesByDate(dateStr);
+            templateDayPositivesListEl.innerHTML = '';
+            if (positives.length === 0) {
+                templateDayPositivesListEl.innerHTML = '<li>No positives for this day.</li>';
+                return;
+            }
+            positives.forEach(p => {
+                const li = document.createElement('li');
+                li.innerHTML = `<label><input type="checkbox" data-name="${p.name}" data-score="${p.score}"> ${p.name}</label>`;
+                templateDayPositivesListEl.appendChild(li);
+            });
+        }
+    });
+
+    templateSelectAllBtn.addEventListener('click', () => {
+        const allCheckboxes = templateDayPositivesListEl.querySelectorAll('input[type="checkbox"]');
+        const isSelectedAll = templateSelectAllBtn.textContent === 'Deselect All';
+
+        allCheckboxes.forEach(box => {
+            box.checked = !isSelectedAll;
+        });
+
+        templateSelectAllBtn.textContent = isSelectedAll ? 'Select All' : 'Deselect All';
+    });
+
+    const saveFromTemplate = async () => {
+        const selectedItems = new Map();
+        templateDayPositivesListEl.querySelectorAll('input:checked').forEach(box => {
+            if (!selectedItems.has(box.dataset.name)) {
+                selectedItems.set(box.dataset.name, parseInt(box.dataset.score, 10));
+            }
+        });
+        templateMasterListEl.querySelectorAll('input:checked').forEach(box => {
+            if (!selectedItems.has(box.dataset.name)) {
+                selectedItems.set(box.dataset.name, parseInt(box.dataset.score, 10));
+            }
+        });
+        for (const [name, score] of selectedItems) {
+            const newPositive = {
+                name, score, date: selectedDate, baseScore: score, count: 1
+            };
+            await addPositive(newPositive);
+        }
+        showPage(homePage);
+    };
+
+    saveFromTemplateBtnTop.addEventListener('click', saveFromTemplate);
+    saveFromTemplateBtnBottom.addEventListener('click', saveFromTemplate);
 
     init();
 });
