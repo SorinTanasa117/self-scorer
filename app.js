@@ -33,6 +33,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const dailyLogTitleEl = document.getElementById('daily-log-title');
     const chartCanvas = document.getElementById('progress-chart');
     const verbChartCanvas = document.getElementById('verb-chart');
+    const verbChartDrilldownEl = document.getElementById('verb-chart-drilldown');
+    const taskDetailPopup = document.getElementById('task-detail-popup');
+    const closeTaskPopupBtn = document.getElementById('close-task-popup-btn');
+    const taskDetailTitle = document.getElementById('task-detail-title');
+    const taskDetailStats = document.getElementById('task-detail-stats');
 
     // Add Positive Page
     const addPositiveForm = document.getElementById('add-positive-form');
@@ -801,6 +806,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 responsive: true,
                 maintainAspectRatio: false,
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const chartElement = elements[0];
+                        const index = chartElement.index;
+                        const category = labels[index];
+                        const data = chartLifestyleData[category];
+                        if (data) {
+                            renderLifestyleDrilldown(category, data.positives, data.totalScore);
+                        }
+                    }
+                },
                 plugins: {
                     tooltip: {
                         callbacks: {
@@ -828,6 +844,67 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
+        });
+    };
+
+    const renderLifestyleDrilldown = (category, positives, totalScore) => {
+        verbChartCanvas.classList.add('hidden');
+        verbChartDrilldownEl.classList.remove('hidden');
+
+        const positivesWithScores = positives.map(name => {
+            const doc = window.nlp(name);
+            const score = doc.values().toNumber().out() || 0;
+            return { name, score };
+        });
+
+        const uniquePositives = [...positivesWithScores.reduce((map, p) => {
+            if (!map.has(p.name)) {
+                map.set(p.name, { ...p, count: 0, totalScore: 0 });
+            }
+            const existing = map.get(p.name);
+            existing.count++;
+            existing.totalScore += p.score;
+            return map;
+        }, new Map()).values()];
+
+        uniquePositives.sort((a, b) => b.totalScore - a.totalScore);
+
+        let drilldownHTML = `
+            <div class="drilldown-header">
+                <h3>${category}</h3>
+                <button id="back-to-verb-chart-btn" class="small-btn">Back</button>
+            </div>
+            <ul class="drilldown-list">
+        `;
+
+        uniquePositives.forEach(p => {
+            drilldownHTML += `
+                <li class="drilldown-item" data-task-name="${p.name}">
+                    <span class="drilldown-name">${p.name}</span>
+                    <span class="drilldown-stats">(x${p.count}, Score: ${p.totalScore})</span>
+                </li>
+            `;
+        });
+
+        drilldownHTML += '</ul>';
+        verbChartDrilldownEl.innerHTML = drilldownHTML;
+
+        document.getElementById('back-to-verb-chart-btn').addEventListener('click', () => {
+            verbChartDrilldownEl.classList.add('hidden');
+            verbChartDrilldownEl.innerHTML = '';
+            verbChartCanvas.classList.remove('hidden');
+        });
+
+        verbChartDrilldownEl.querySelectorAll('.drilldown-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const taskName = item.dataset.taskName;
+                const taskData = uniquePositives.find(p => p.name === taskName);
+                if (taskData) {
+                    taskDetailTitle.textContent = taskData.name;
+                    taskDetailStats.textContent = `Times Done: ${taskData.count} | Total Score: ${taskData.totalScore}`;
+                    taskDetailPopup.classList.remove('hidden');
+                }
+            });
         });
     };
 
@@ -975,6 +1052,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 window.location.href = 'login.html';
             }
+        });
+
+        closeTaskPopupBtn.addEventListener('click', () => {
+            taskDetailPopup.classList.add('hidden');
         });
 
         setupDropdown(positiveTemplatesInput, standardTemplatesOptions, () => standardTemplates, (value) => {

@@ -630,3 +630,120 @@ section {
         max-width: 400px;
     }
 }
+
+/* Lifestyle Chart Drilldown */
+#verb-chart-drilldown {
+    padding: 1rem;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.drilldown-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #667eea;
+}
+
+.drilldown-header h3 {
+    margin: 0;
+    color: #667eea;
+}
+
+.drilldown-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.drilldown-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid #e8ecf1;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.drilldown-item:hover {
+    background-color: #f8f9fa;
+}
+
+.drilldown-item:last-child {
+    border-bottom: none;
+}
+
+.drilldown-name {
+    font-weight: 500;
+}
+
+.drilldown-stats {
+    font-size: 0.9rem;
+    color: #7f8c8d;
+    white-space: nowrap;
+    margin-left: 1rem;
+}
+
+/* Task Detail Popup */
+.popup-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 2000;
+    animation: fadeIn 0.3s;
+}
+
+.popup-container:not(.hidden) {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.popup-content {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    animation: slideInUp 0.4s;
+}
+
+.close-popup-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #aaa;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.close-popup-btn:hover {
+    color: #333;
+}
+
+#task-detail-title {
+    margin-top: 0;
+    color: #2980b9;
+}
+
+/* Keyframe Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInUp {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
