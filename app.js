@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const positivesListEl = document.getElementById('positives-list');
     const dailyLogTitleEl = document.getElementById('daily-log-title');
     const chartCanvas = document.getElementById('progress-chart');
+    const verbChartCanvas = document.getElementById('verb-chart');
 
     // Add Positive Page
     const addPositiveForm = document.getElementById('add-positive-form');
@@ -68,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let templatePageMonth = currentMonth;
     let templatePageYear = currentYear;
     let myChart;
+    let verbChart;
     let myTemplates = [];
 
     // --- Templates ---
@@ -107,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await renderPositivesForDay(selectedDate);
         const activeRange = document.querySelector('.toggle-btn.active').dataset.range;
         await renderChart(activeRange);
+        await renderVerbChart();
     };
 
     // --- Event Listeners ---
@@ -598,6 +601,95 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     };
+
+    const renderVerbChart = async () => {
+        if (verbChart) {
+            verbChart.destroy();
+        }
+
+        if (!currentUser) {
+            return;
+        }
+
+        const allPositives = await getAllPositives();
+        const actionData = {}; // Using a more descriptive name
+
+        allPositives.forEach(p => {
+            const doc = window.nlp(p.name);
+            let action = null;
+
+            // Try to find the most descriptive phrase first.
+            // Match verb phrases like "went dancing" or "read a book".
+            const patterns = [
+                '#Verb+ #Gerund+',
+                '#Verb+ #Noun+',
+                '#Verb+ #Adjective',
+                '#Verb+ #Adverb'
+            ];
+
+            for (const pattern of patterns) {
+                const match = doc.match(pattern);
+                if (match.found) {
+                    action = match.first().text('normal'); // Get the normalized text of the first match
+                    break;
+                }
+            }
+
+            // If no descriptive phrase is found, fall back to the first main verb.
+            if (!action) {
+                const verbs = doc.verbs().filter(v => !v.has('#Auxiliary')); // Exclude auxiliary verbs
+                if (verbs.found) {
+                    action = verbs.first().text('normal');
+                }
+            }
+
+            if (action) {
+                if (!actionData[action]) {
+                    actionData[action] = { totalScore: 0, count: 0 };
+                }
+                actionData[action].totalScore += p.score;
+                actionData[action].count++;
+            }
+        });
+
+        const chartData = Object.keys(actionData).map(action => ({
+            x: actionData[action].totalScore,
+            y: actionData[action].count,
+            r: Math.sqrt(actionData[action].count) * 5,
+            action: action // Changed from 'verb' to 'action' for clarity
+        }));
+
+        verbChart = new Chart(verbChartCanvas, {
+            type: 'bubble',
+            data: {
+                datasets: [{
+                    label: 'Action Analysis (Score vs. Count)', // Updated label
+                    data: chartData,
+                    backgroundColor: 'rgba(231, 76, 60, 0.5)',
+                    borderColor: '#e74c3c',
+                }]
+            },
+            options: {
+                scales: {
+                    x: { beginAtZero: true, title: { display: true, text: 'Total Score' } },
+                    y: { beginAtZero: true, title: { display: true, text: 'Number of Actions' } }
+                },
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const dataPoint = context.raw;
+                                return `${dataPoint.action}: ${dataPoint.y} actions, ${dataPoint.x} total score`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    };
+
     const populateMyTemplates = async () => {
         if (!currentUser) return;
         myTemplates = await getAllCustomTemplates();
