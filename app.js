@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const positivesListEl = document.getElementById('positives-list');
     const dailyLogTitleEl = document.getElementById('daily-log-title');
     const chartCanvas = document.getElementById('progress-chart');
+    const verbChartCanvas = document.getElementById('verb-chart');
 
     // Add Positive Page
     const addPositiveForm = document.getElementById('add-positive-form');
@@ -68,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let templatePageMonth = currentMonth;
     let templatePageYear = currentYear;
     let myChart;
+    let verbChart;
     let myTemplates = [];
 
     // --- Templates ---
@@ -107,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await renderPositivesForDay(selectedDate);
         const activeRange = document.querySelector('.toggle-btn.active').dataset.range;
         await renderChart(activeRange);
+        await renderVerbChart();
     };
 
     // --- Event Listeners ---
@@ -598,6 +601,82 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     };
+
+    const renderVerbChart = async () => {
+        if (verbChart) {
+            verbChart.destroy();
+        }
+
+        if (!currentUser) {
+            return;
+        }
+
+        const allPositives = await getAllPositives();
+        const verbData = {};
+
+        allPositives.forEach(p => {
+            const doc = window.nlp(p.name);
+            const verbs = doc.verbs().out('array');
+            verbs.forEach(verb => {
+                if (!verbData[verb]) {
+                    verbData[verb] = { totalScore: 0, count: 0, positives: [] };
+                }
+                verbData[verb].totalScore += p.score;
+                verbData[verb].count++;
+                verbData[verb].positives.push(p.name);
+            });
+        });
+
+        const chartData = Object.keys(verbData).map(verb => ({
+            x: verbData[verb].totalScore,
+            y: verbData[verb].count,
+            r: Math.sqrt(verbData[verb].count) * 5, // Bubble radius based on count
+            verb: verb
+        }));
+
+        verbChart = new Chart(verbChartCanvas, {
+            type: 'bubble',
+            data: {
+                datasets: [{
+                    label: 'Verb Analysis (Score vs. Count)',
+                    data: chartData,
+                    backgroundColor: 'rgba(231, 76, 60, 0.5)',
+                    borderColor: '#e74c3c',
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Total Score'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Actions'
+                        }
+                    }
+                },
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const dataPoint = context.raw;
+                                return `${dataPoint.verb}: ${dataPoint.y} actions, ${dataPoint.x} total score`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    };
+
     const populateMyTemplates = async () => {
         if (!currentUser) return;
         myTemplates = await getAllCustomTemplates();
