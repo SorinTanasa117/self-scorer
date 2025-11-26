@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const positivesListEl = document.getElementById('positives-list');
     const dailyLogTitleEl = document.getElementById('daily-log-title');
     const chartCanvas = document.getElementById('progress-chart');
+    const categoryChartCanvas = document.getElementById('category-chart');
 
     // Add Positive Page
     const addPositiveForm = document.getElementById('add-positive-form');
@@ -68,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let templatePageMonth = currentMonth;
     let templatePageYear = currentYear;
     let myChart;
+    let categoryChart;
     let myTemplates = [];
 
     // --- Templates ---
@@ -107,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await renderPositivesForDay(selectedDate);
         const activeRange = document.querySelector('.toggle-btn.active').dataset.range;
         await renderChart(activeRange);
+        await renderLifestyleAnalysisChart();
     };
 
     // --- Event Listeners ---
@@ -239,9 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: name, date: selectedDate, score: parseInt(difficultySlider.value, 10),
             baseScore: parseInt(difficultySlider.value, 10), count: 1
         };
-        console.log('Adding new positive:', newPositiveData);
         const newPositive = await addPositive(newPositiveData);
-        console.log('Added new positive:', newPositive);
         if (newPositive && !newPositive.error) {
             await showPage(homePage);
         } else {
@@ -453,7 +454,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         const dayData = await getPositivesByDate(dateStr);
-        console.log(`Rendering positives for ${dateStr}:`, dayData);
         positivesListEl.innerHTML = '';
         if (dayData.length === 0) {
             positivesListEl.innerHTML = '<li>No positives recorded for this day.</li>';
@@ -598,6 +598,91 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     };
+
+    const renderLifestyleAnalysisChart = async () => {
+        if (categoryChart) {
+            categoryChart.destroy();
+        }
+
+        const lifestyleCategories = {
+            'Social': ['friends', 'family', 'partner', 'party', 'social', 'community', 'connected', 'hugged', 'kissed'],
+            'Career': ['work', 'career', 'project', 'task', 'job', 'promotion', 'accomplished', 'completed', 'achieved'],
+            'Health': ['health', 'fitness', 'exercise', 'workout', 'gym', 'ran', 'walked', 'healthy', 'meal', 'sleep'],
+            'Hobbies': ['hobby', 'leisure', 'read', 'book', 'movie', 'music', 'game', 'sport', 'traveled', 'explored'],
+            'Growth': ['learned', 'grew', 'skill', 'meditated', 'reflected', 'journaled', 'therapy', 'mindfulness'],
+            'Home': ['home', 'cleaned', 'organized', 'cooked', 'meal', 'garden', 'pet'],
+            'Kindness': ['helped', 'donated', 'volunteered', 'kindness', 'gift', 'thanked', 'complimented']
+        };
+
+        const allPositives = await getAllPositives();
+        const categoryData = {};
+
+        allPositives.forEach(p => {
+            const positiveText = p.name.toLowerCase();
+            const foundCategories = new Set();
+
+            for (const category in lifestyleCategories) {
+                for (const keyword of lifestyleCategories[category]) {
+                    if (positiveText.includes(keyword)) {
+                        foundCategories.add(category);
+                        break;
+                    }
+                }
+            }
+
+            foundCategories.forEach(category => {
+                if (!categoryData[category]) {
+                    categoryData[category] = { totalScore: 0, count: 0 };
+                }
+                categoryData[category].totalScore += p.score;
+                categoryData[category].count++;
+            });
+        });
+
+        const chartData = Object.keys(categoryData).map(category => ({
+            x: categoryData[category].totalScore,
+            y: categoryData[category].count,
+            r: Math.sqrt(categoryData[category].count) * 5,
+            category: category
+        }));
+
+        const ctx = categoryChartCanvas.getContext('2d');
+        if (!ctx) {
+            console.error("Failed to get 2D context from canvas");
+            return;
+        }
+
+        categoryChart = new Chart(ctx, {
+            type: 'bubble',
+            data: {
+                datasets: [{
+                    label: 'Lifestyle Analysis (Score vs. Count)',
+                    data: chartData,
+                    backgroundColor: 'rgba(231, 76, 60, 0.6)',
+                    borderColor: '#e74c3c',
+                }]
+            },
+            options: {
+                scales: {
+                    x: { beginAtZero: true, title: { display: true, text: 'Total Score' } },
+                    y: { beginAtZero: true, title: { display: true, text: 'Number of Actions' } }
+                },
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const dataPoint = context.raw;
+                                return `${dataPoint.category}: ${dataPoint.y} actions, ${dataPoint.x} total score`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    };
+
     const populateMyTemplates = async () => {
         if (!currentUser) return;
         myTemplates = await getAllCustomTemplates();
