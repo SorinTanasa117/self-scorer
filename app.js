@@ -289,6 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await renderCalendar(currentMonth, currentYear);
             const activeRange = document.querySelector('.toggle-btn.active').dataset.range;
             await renderChart(activeRange);
+            await renderVerbChart();
         }
     });
 
@@ -298,6 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.classList.add('active');
             const range = e.target.getAttribute('data-range');
             await renderChart(range);
+            await renderVerbChart();
         });
     });
 
@@ -599,6 +601,127 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    const lifestyleCategories = {
+        'Work': ['work', 'job', 'office', 'meeting', 'project', 'task', 'deadline', 'boss', 'colleague', 'professional', 'career', 'business', 'client', 'presentation', 'report', 'email', 'conference', 'promotion', 'salary', 'employee', 'manager', 'team', 'productivity', 'complete', 'accomplish', 'achieve'],
+        'Hobbies': ['hobby', 'fun', 'game', 'play', 'sport', 'music', 'art', 'craft', 'collect', 'garden', 'cook', 'bake', 'photo', 'travel', 'movie', 'book', 'read', 'watch', 'listen', 'draw', 'paint', 'sing', 'dance', 'hike', 'fish', 'camp', 'knit', 'sew', 'puzzle', 'chess', 'entertainment'],
+        'Physical Health': ['exercise', 'gym', 'workout', 'run', 'jog', 'walk', 'swim', 'bike', 'yoga', 'stretch', 'sleep', 'rest', 'diet', 'eat', 'healthy', 'meal', 'nutrition', 'vitamin', 'doctor', 'checkup', 'medicine', 'weight', 'fitness', 'strength', 'cardio', 'body', 'physical', 'sport', 'active'],
+        'Mental Health': ['mental', 'therapy', 'meditate', 'mindful', 'relax', 'stress', 'anxiety', 'calm', 'peace', 'breathe', 'journal', 'reflect', 'self-care', 'emotion', 'feeling', 'mood', 'positive', 'gratitude', 'thankful', 'appreciate', 'happy', 'joy', 'content', 'wellbeing', 'wellness', 'balance', 'cope', 'heal'],
+        'Community Service': ['volunteer', 'donate', 'charity', 'help', 'service', 'community', 'nonprofit', 'give', 'support', 'assist', 'aid', 'contribute', 'homeless', 'shelter', 'food bank', 'mentor', 'cause', 'civic', 'neighbor', 'kindness'],
+        'Family': ['family', 'parent', 'child', 'kid', 'son', 'daughter', 'mother', 'father', 'mom', 'dad', 'sibling', 'brother', 'sister', 'grandparent', 'grandmother', 'grandfather', 'aunt', 'uncle', 'cousin', 'relative', 'home', 'dinner', 'together', 'love', 'care'],
+        'Education': ['learn', 'study', 'school', 'class', 'course', 'lesson', 'teach', 'tutor', 'homework', 'exam', 'test', 'grade', 'degree', 'university', 'college', 'knowledge', 'skill', 'train', 'practice', 'improve', 'develop', 'grow', 'education', 'certificate', 'workshop', 'seminar'],
+        'Creativity': ['create', 'creative', 'invent', 'design', 'write', 'compose', 'imagine', 'idea', 'inspire', 'innovate', 'artistic', 'craft', 'build', 'make', 'develop', 'express', 'original', 'unique', 'vision', 'story', 'poem', 'novel', 'sculpture', 'photography'],
+        'Spirituality': ['spirit', 'pray', 'worship', 'church', 'temple', 'mosque', 'faith', 'belief', 'god', 'religion', 'soul', 'sacred', 'holy', 'divine', 'blessing', 'sermon', 'scripture', 'bible', 'quran', 'meditation', 'inner', 'purpose', 'meaning', 'transcend'],
+        'Finances': ['money', 'save', 'budget', 'invest', 'bank', 'finance', 'debt', 'pay', 'bill', 'expense', 'income', 'salary', 'tax', 'retire', 'wealth', 'financial', 'credit', 'loan', 'mortgage', 'insurance', 'stock', 'fund', 'account', 'spend'],
+        'Relationships': ['friend', 'relationship', 'partner', 'spouse', 'husband', 'wife', 'boyfriend', 'girlfriend', 'date', 'romance', 'love', 'affection', 'hug', 'kiss', 'social', 'connect', 'bond', 'trust', 'communicate', 'listen', 'talk', 'share', 'support', 'forgive', 'apologize', 'respect'],
+        'Environmental Protection': ['environment', 'recycle', 'green', 'sustainable', 'eco', 'nature', 'climate', 'pollution', 'conserve', 'energy', 'water', 'waste', 'reduce', 'reuse', 'plant', 'tree', 'organic', 'clean', 'protect', 'earth', 'planet', 'wildlife', 'carbon'],
+        'Politics': ['politic', 'vote', 'election', 'government', 'law', 'policy', 'citizen', 'civic', 'democracy', 'rights', 'activism', 'protest', 'campaign', 'candidate', 'party', 'congress', 'senate', 'president', 'mayor', 'council', 'legislation', 'reform'],
+        'Miscellaneous': []
+    };
+
+    const categoryColors = {
+        'Work': 'rgba(52, 152, 219, 0.7)',
+        'Hobbies': 'rgba(155, 89, 182, 0.7)',
+        'Physical Health': 'rgba(46, 204, 113, 0.7)',
+        'Mental Health': 'rgba(241, 196, 15, 0.7)',
+        'Community Service': 'rgba(230, 126, 34, 0.7)',
+        'Family': 'rgba(231, 76, 60, 0.7)',
+        'Education': 'rgba(26, 188, 156, 0.7)',
+        'Creativity': 'rgba(142, 68, 173, 0.7)',
+        'Spirituality': 'rgba(52, 73, 94, 0.7)',
+        'Finances': 'rgba(39, 174, 96, 0.7)',
+        'Relationships': 'rgba(192, 57, 43, 0.7)',
+        'Environmental Protection': 'rgba(22, 160, 133, 0.7)',
+        'Politics': 'rgba(44, 62, 80, 0.7)',
+        'Miscellaneous': 'rgba(149, 165, 166, 0.7)'
+    };
+
+    const classifyPositiveToLifestyle = (positiveName) => {
+        const doc = window.nlp(positiveName.toLowerCase());
+        const normalizedText = positiveName.toLowerCase();
+        
+        const terms = doc.terms().out('array').map(w => w.toLowerCase());
+        const nouns = doc.nouns().toSingular().out('array').map(w => w.toLowerCase());
+        const verbs = doc.verbs().toInfinitive().out('array').map(w => w.toLowerCase());
+        const allTerms = [...new Set([...terms, ...nouns, ...verbs])];
+        
+        let bestMatch = 'Miscellaneous';
+        let highestScore = 0;
+        
+        for (const [category, keywords] of Object.entries(lifestyleCategories)) {
+            if (category === 'Miscellaneous') continue;
+            
+            let score = 0;
+            for (const keyword of keywords) {
+                if (keyword.includes(' ')) {
+                    if (normalizedText.includes(keyword)) {
+                        score += 3;
+                    }
+                } else {
+                    for (const term of allTerms) {
+                        if (term === keyword) {
+                            score += 2;
+                        } else if (term.startsWith(keyword) || keyword.startsWith(term)) {
+                            if (Math.abs(term.length - keyword.length) <= 3) {
+                                score += 1;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (score > highestScore) {
+                highestScore = score;
+                bestMatch = category;
+            }
+        }
+        
+        return bestMatch;
+    };
+
+    const getDateRangeForChart = () => {
+        const activeRange = document.querySelector('.toggle-btn.active')?.dataset.range || 'week';
+        let startStr, endStr;
+        
+        switch (activeRange) {
+            case 'week': {
+                const selected = new Date(selectedDate + 'T00:00:00Z');
+                const dayOfWeek = selected.getUTCDay();
+                const offset = (dayOfWeek === 0) ? 6 : dayOfWeek - 1;
+                const startDate = new Date(selected);
+                startDate.setUTCDate(selected.getUTCDate() - offset);
+                const endDate = new Date(startDate);
+                endDate.setUTCDate(startDate.getUTCDate() + 6);
+                startStr = startDate.toISOString().split('T')[0];
+                endStr = endDate.toISOString().split('T')[0];
+                break;
+            }
+            case 'month': {
+                const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+                startStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
+                endStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+                break;
+            }
+            case 'year': {
+                startStr = `${currentYear}-01-01`;
+                endStr = `${currentYear}-12-31`;
+                break;
+            }
+            default: {
+                const selected = new Date(selectedDate + 'T00:00:00Z');
+                const dayOfWeek = selected.getUTCDay();
+                const offset = (dayOfWeek === 0) ? 6 : dayOfWeek - 1;
+                const startDate = new Date(selected);
+                startDate.setUTCDate(selected.getUTCDate() - offset);
+                const endDate = new Date(startDate);
+                endDate.setUTCDate(startDate.getUTCDate() + 6);
+                startStr = startDate.toISOString().split('T')[0];
+                endStr = endDate.toISOString().split('T')[0];
+            }
+        }
+        
+        return { startStr, endStr };
+    };
+
     const renderVerbChart = async () => {
         if (verbChart) {
             verbChart.destroy();
@@ -608,40 +731,60 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const allPositives = await getAllPositives();
-        const verbData = {};
-
-        allPositives.forEach(p => {
-            const doc = window.nlp(p.name);
-            const verbs = doc.verbs().out('array');
-            verbs.forEach(verb => {
-                if (!verbData[verb]) {
-                    verbData[verb] = { totalScore: 0, count: 0, positives: [] };
-                }
-                verbData[verb].totalScore += p.score;
-                verbData[verb].count++;
-                verbData[verb].positives.push(p.name);
-            });
+        const { startStr, endStr } = getDateRangeForChart();
+        const rangePositives = await getPositivesByDateRange(startStr, endStr);
+        
+        const lifestyleData = {};
+        Object.keys(lifestyleCategories).forEach(category => {
+            lifestyleData[category] = { totalScore: 0, count: 0, positives: [] };
         });
 
-        const chartData = Object.keys(verbData).map(verb => ({
-            x: verbData[verb].totalScore,
-            y: verbData[verb].count,
-            r: Math.sqrt(verbData[verb].count) * 5, // Bubble radius based on count
-            verb: verb
-        }));
+        rangePositives.forEach(p => {
+            const category = classifyPositiveToLifestyle(p.name);
+            lifestyleData[category].totalScore += p.score;
+            lifestyleData[category].count++;
+            lifestyleData[category].positives.push(p.name);
+        });
+
+        const activeCategoryData = Object.keys(lifestyleData)
+            .filter(cat => lifestyleData[cat].count > 0)
+            .map(cat => ({
+                category: cat,
+                totalScore: lifestyleData[cat].totalScore,
+                count: lifestyleData[cat].count,
+                positives: lifestyleData[cat].positives,
+                color: categoryColors[cat]
+            }))
+            .sort((a, b) => b.totalScore - a.totalScore);
+
+        const labels = activeCategoryData.map(d => d.category);
+        const scores = activeCategoryData.map(d => d.totalScore);
+        const colors = activeCategoryData.map(d => d.color);
+        const borderColors = colors.map(c => c.replace('0.7', '1'));
+
+        const chartLifestyleData = {};
+        activeCategoryData.forEach(d => {
+            chartLifestyleData[d.category] = { 
+                count: d.count, 
+                totalScore: d.totalScore, 
+                positives: d.positives 
+            };
+        });
 
         verbChart = new Chart(verbChartCanvas, {
-            type: 'bubble',
+            type: 'bar',
             data: {
+                labels: labels,
                 datasets: [{
-                    label: 'Verb Analysis (Score vs. Count)',
-                    data: chartData,
-                    backgroundColor: 'rgba(231, 76, 60, 0.5)',
-                    borderColor: '#e74c3c',
+                    label: 'Score by Life Area',
+                    data: scores,
+                    backgroundColor: colors,
+                    borderColor: borderColors,
+                    borderWidth: 1
                 }]
             },
             options: {
+                indexAxis: 'y',
                 scales: {
                     x: {
                         beginAtZero: true,
@@ -651,10 +794,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     },
                     y: {
-                        beginAtZero: true,
                         title: {
-                            display: true,
-                            text: 'Number of Actions'
+                            display: false
                         }
                     }
                 },
@@ -664,10 +805,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                const dataPoint = context.raw;
-                                return `${dataPoint.verb}: ${dataPoint.y} actions, ${dataPoint.x} total score`;
+                                const category = context.label;
+                                const data = chartLifestyleData[category];
+                                if (data) {
+                                    return `${data.count} action(s), ${data.totalScore} total score`;
+                                }
+                                return '';
+                            },
+                            afterLabel: function(context) {
+                                const category = context.label;
+                                const data = chartLifestyleData[category];
+                                if (data && data.positives.length > 0) {
+                                    const sample = data.positives.slice(0, 3).map(p => `  - ${p.substring(0, 40)}${p.length > 40 ? '...' : ''}`);
+                                    return sample;
+                                }
+                                return '';
                             }
                         }
+                    },
+                    legend: {
+                        display: false
                     }
                 }
             }

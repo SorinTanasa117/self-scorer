@@ -13,7 +13,7 @@ Frontend-only static web application using Firebase for authentication and data 
 - **Libraries**:
   - Firebase SDK 9.6.10 (Authentication & Firestore)
   - Chart.js (data visualization)
-  - Compromise.js (natural language processing for verb analysis)
+  - Compromise.js (natural language processing for lifestyle categorization)
 - **Server**: http-server on port 5000 (development)
 
 ### Backend Services
@@ -27,7 +27,7 @@ Frontend-only static web application using Firebase for authentication and data 
 3. **Daily Logging**: Add positive actions with difficulty ratings (1-10)
 4. **Templates**: Standard and custom templates for common positive actions
 5. **Progress Charts**: Week/Month/Year view of positive action scores
-6. **Verb Analysis**: Analyzes types of actions using natural language processing
+6. **Lifestyle Analysis**: Categorizes positive actions into 14 life areas (Work, Hobbies, Physical Health, Mental Health, Community Service, Family, Education, Creativity, Spirituality, Finances, Relationships, Environmental Protection, Politics, Miscellaneous) using NLP
 7. **Template Reuse**: Copy positive actions from previous days
 
 ## File Structure
@@ -87,6 +87,12 @@ Configured as a static site deployment:
 - Older dates are view-only (displayed with "uneditable-day" style)
 
 ## Recent Changes
+- **2025-11-26**: Replaced Verb Analysis with Lifestyle Analysis
+  - Changed chart from verb-based bubble chart to lifestyle category bar chart
+  - Uses Compromise.js NLP to classify entries into 14 life areas
+  - Chart now syncs with Progress chart date range (week/month/year)
+  - Color-coded horizontal bar chart for better visualization
+
 - **2025-11-26**: Initial import and Replit environment setup
   - Cleaned up package.json (removed unused backend dependencies)
   - Configured http-server for static file serving on port 5000
