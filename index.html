@@ -42,8 +42,20 @@
                     <canvas id="progress-chart"></canvas>
                 </div>
                 <h3>Lifestyle Analysis</h3>
-                <div class="chart-wrapper">
+                <div id="lifestyle-chart-container" class="chart-wrapper">
+                    <button id="lifestyle-chart-back-btn" class="small-btn hidden">Back</button>
                     <canvas id="verb-chart"></canvas>
+                </div>
+            </div>
+
+            <div id="task-detail-popup" class="popup-container hidden">
+                <div class="popup-content">
+                    <span class="close-popup-btn">&times;</span>
+                    <h3 id="task-detail-title"></h3>
+                    <p><strong>Total Occurrences:</strong> <span id="task-detail-count"></span></p>
+                    <p><strong>Total Score:</strong> <span id="task-detail-score"></span></p>
+                    <p><strong>Dates Recorded:</strong></p>
+                    <ul id="task-detail-dates"></ul>
                 </div>
             </div>
 

@@ -33,6 +33,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const dailyLogTitleEl = document.getElementById('daily-log-title');
     const chartCanvas = document.getElementById('progress-chart');
     const verbChartCanvas = document.getElementById('verb-chart');
+    const lifestyleChartBackBtn = document.getElementById('lifestyle-chart-back-btn');
+
+    // Task Detail Popup
+    const taskDetailPopup = document.getElementById('task-detail-popup');
+    const taskDetailTitle = document.getElementById('task-detail-title');
+    const taskDetailCount = document.getElementById('task-detail-count');
+    const taskDetailScore = document.getElementById('task-detail-score');
+    const taskDetailDates = document.getElementById('task-detail-dates');
+    const closePopupBtn = taskDetailPopup.querySelector('.close-popup-btn');
 
     // Add Positive Page
     const addPositiveForm = document.getElementById('add-positive-form');
@@ -71,6 +80,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let myChart;
     let verbChart;
     let myTemplates = [];
+    let lifestyleChartState = 'categories'; // Can be 'categories' or 'tasks'
+    let lifestyleChartData = [];
+    let selectedLifestyleCategory = '';
 
     // --- Templates ---
     const standardTemplates = [
@@ -726,51 +738,38 @@ document.addEventListener('DOMContentLoaded', () => {
         if (verbChart) {
             verbChart.destroy();
         }
-
+        lifestyleChartBackBtn.classList.toggle('hidden', lifestyleChartState === 'categories');
         if (!currentUser) {
             return;
         }
+        if (lifestyleChartState === 'categories') {
+            await renderLifestyleCategoriesChart();
+        } else if (lifestyleChartState === 'tasks') {
+            await renderLifestyleTasksChart();
+        }
+    };
 
+    const renderLifestyleCategoriesChart = async () => {
         const { startStr, endStr } = getDateRangeForChart();
         const rangePositives = await getPositivesByDateRange(startStr, endStr);
-        
-        const lifestyleData = {};
+        lifestyleChartData = rangePositives; // Cache the data
+        const processedData = {};
         Object.keys(lifestyleCategories).forEach(category => {
-            lifestyleData[category] = { totalScore: 0, count: 0, positives: [] };
+            processedData[category] = { totalScore: 0, count: 0, positives: [] };
         });
-
         rangePositives.forEach(p => {
             const category = classifyPositiveToLifestyle(p.name);
-            lifestyleData[category].totalScore += p.score;
-            lifestyleData[category].count++;
-            lifestyleData[category].positives.push(p.name);
+            processedData[category].totalScore += p.score;
+            processedData[category].count++;
+            processedData[category].positives.push(p);
         });
-
-        const activeCategoryData = Object.keys(lifestyleData)
-            .filter(cat => lifestyleData[cat].count > 0)
-            .map(cat => ({
-                category: cat,
-                totalScore: lifestyleData[cat].totalScore,
-                count: lifestyleData[cat].count,
-                positives: lifestyleData[cat].positives,
-                color: categoryColors[cat]
-            }))
+        const activeCategoryData = Object.entries(processedData)
+            .filter(([_, data]) => data.count > 0)
+            .map(([category, data]) => ({ category, ...data, color: categoryColors[category] }))
             .sort((a, b) => b.totalScore - a.totalScore);
-
         const labels = activeCategoryData.map(d => d.category);
         const scores = activeCategoryData.map(d => d.totalScore);
         const colors = activeCategoryData.map(d => d.color);
-        const borderColors = colors.map(c => c.replace('0.7', '1'));
-
-        const chartLifestyleData = {};
-        activeCategoryData.forEach(d => {
-            chartLifestyleData[d.category] = { 
-                count: d.count, 
-                totalScore: d.totalScore, 
-                positives: d.positives 
-            };
-        });
-
         verbChart = new Chart(verbChartCanvas, {
             type: 'bar',
             data: {
@@ -779,57 +778,145 @@ document.addEventListener('DOMContentLoaded', () => {
                     label: 'Score by Life Area',
                     data: scores,
                     backgroundColor: colors,
-                    borderColor: borderColors,
+                    borderColor: colors.map(c => c.replace('0.7', '1')),
                     borderWidth: 1
                 }]
             },
             options: {
                 indexAxis: 'y',
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Total Score'
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: false
-                        }
+                onClick: (e) => {
+                    const activePoints = verbChart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
+                    if (activePoints.length > 0) {
+                        const { index } = activePoints[0];
+                        selectedLifestyleCategory = verbChart.data.labels[index];
+                        lifestyleChartState = 'tasks';
+                        renderVerbChart();
                     }
                 },
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 plugins: {
                     tooltip: {
                         callbacks: {
-                            label: function(context) {
+                            label: (context) => {
                                 const category = context.label;
-                                const data = chartLifestyleData[category];
-                                if (data) {
-                                    return `${data.count} action(s), ${data.totalScore} total score`;
-                                }
-                                return '';
+                                const data = activeCategoryData.find(d => d.category === category);
+                                return data ? `${data.count} action(s), ${data.totalScore} total score` : '';
                             },
-                            afterLabel: function(context) {
+                            afterLabel: (context) => {
                                 const category = context.label;
-                                const data = chartLifestyleData[category];
+                                const data = activeCategoryData.find(d => d.category === category);
                                 if (data && data.positives.length > 0) {
-                                    const sample = data.positives.slice(0, 3).map(p => `  - ${p.substring(0, 40)}${p.length > 40 ? '...' : ''}`);
+                                    const sample = data.positives.slice(0, 3).map(p => `  - ${p.name.substring(0, 40)}${p.name.length > 40 ? '...' : ''}`);
                                     return sample;
                                 }
                                 return '';
                             }
                         }
                     },
-                    legend: {
-                        display: false
-                    }
+                    legend: { display: false }
                 }
             }
         });
     };
+
+    const renderLifestyleTasksChart = async () => {
+        const tasksInCategory = lifestyleChartData.filter(p => classifyPositiveToLifestyle(p.name) === selectedLifestyleCategory);
+        const tasksData = tasksInCategory.reduce((acc, p) => {
+            if (!acc[p.name]) {
+                acc[p.name] = { totalScore: 0, count: 0, dates: [] };
+            }
+            acc[p.name].totalScore += p.score;
+            acc[p.name].count += 1; // Correctly increment by 1 for each occurrence
+            acc[p.name].dates.push(p.date);
+            return acc;
+        }, {});
+        const sortedTasks = Object.entries(tasksData)
+            .map(([name, data]) => ({ name, ...data }))
+            .sort((a, b) => b.totalScore - a.totalScore);
+        const labels = sortedTasks.map(t => t.name);
+        const scores = sortedTasks.map(t => t.totalScore);
+        const categoryColor = categoryColors[selectedLifestyleCategory] || 'rgba(149, 165, 166, 0.7)';
+        const splitLabels = labels.map(label => splitLabel(label, 20));
+
+        verbChart = new Chart(verbChartCanvas, {
+            type: 'bar',
+            data: {
+                labels: splitLabels,
+                datasets: [{
+                    label: `Tasks in ${selectedLifestyleCategory}`,
+                    data: scores,
+                    backgroundColor: categoryColor,
+                    borderColor: categoryColor.replace('0.7', '1'),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                onClick: (e) => {
+                    const activePoints = verbChart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
+                    if (activePoints.length > 0) {
+                        const { index } = activePoints[0];
+                        const taskData = sortedTasks[index];
+                        if (taskData) {
+                            showTaskDetailPopup(taskData);
+                        }
+                    }
+                },
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                const index = context.dataIndex;
+                                const data = sortedTasks[index];
+                                return data ? `${data.count} time(s), ${data.totalScore} total score` : '';
+                            }
+                        }
+                    },
+                    legend: { display: false }
+                }
+            }
+        });
+    };
+
+    const showTaskDetailPopup = (taskData) => {
+        taskDetailTitle.textContent = taskData.name;
+        taskDetailCount.textContent = taskData.count;
+        taskDetailScore.textContent = taskData.totalScore;
+        taskDetailDates.innerHTML = '';
+        const uniqueDates = [...new Set(taskData.dates)];
+        uniqueDates.forEach(date => {
+            const li = document.createElement('li');
+            li.textContent = date;
+            taskDetailDates.appendChild(li);
+        });
+        taskDetailPopup.classList.remove('hidden');
+    };
+
+    const splitLabel = (label, maxLen) => {
+        if (label.length <= maxLen) return label;
+        const words = label.split(' ');
+        const lines = [];
+        let currentLine = '';
+        for (const word of words) {
+            if ((currentLine + word).length > maxLen) {
+                lines.push(currentLine.trim());
+                currentLine = '';
+            }
+            currentLine += `${word} `;
+        }
+        lines.push(currentLine.trim());
+        return lines;
+    };
+
+    lifestyleChartBackBtn.addEventListener('click', () => {
+        lifestyleChartState = 'categories';
+        renderVerbChart();
+    });
+
+    closePopupBtn.addEventListener('click', () => {
+        taskDetailPopup.classList.add('hidden');
+    });
 
     const populateMyTemplates = async () => {
         if (!currentUser) return;
@@ -955,7 +1042,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const init = async () => {
         // Initial UI Render
         showPage(homePage); // Make sure the home page is visible
-        document.body.classList.remove('loading');
         populateMainSelectors();
         await renderCalendar(currentMonth, currentYear);
         await renderPositivesForDay(selectedDate); // Show empty state for today
@@ -966,6 +1052,8 @@ document.addEventListener('DOMContentLoaded', () => {
         onAuthStateChange(async (user) => {
             currentUser = user;
             await updateUIForAuthState();
+            // Remove loading screen ONLY after auth state is confirmed and UI is updated
+            document.body.classList.remove('loading');
         });
 
         // Event Listeners
