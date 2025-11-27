@@ -705,3 +705,8 @@ section {
     border-radius: 4px;
     margin-bottom: 0.5rem;
 }
+
+
+.cancel-btn {
+    background-color: #bdc3c7;
+}
