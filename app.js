@@ -69,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveFromTemplateBtnTop = document.getElementById('save-from-template-btn');
     const saveFromTemplateBtnBottom = document.getElementById('save-from-template-btn-bottom');
     const cancelFromTemplateBtn = document.getElementById('cancel-from-template-btn');
+    const cancelFromTemplateBtnTop = document.getElementById('cancel-from-template-btn-top');
 
     // --- State ---
     let currentUser = null;
@@ -132,6 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     cancelPositiveBtn.addEventListener('click', async () => await showPage(homePage));
     cancelFromTemplateBtn.addEventListener('click', async () => await showPage(homePage));
+    cancelFromTemplateBtnTop.addEventListener('click', async () => await showPage(homePage));
 
     monthSelector.addEventListener('change', async () => {
         currentMonth = parseInt(monthSelector.value, 10);
