@@ -1,3 +1,4 @@
+
 import {
     onAuthStateChange,
     logoutUser,
@@ -32,7 +33,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const positivesListEl = document.getElementById('positives-list');
     const dailyLogTitleEl = document.getElementById('daily-log-title');
     const chartCanvas = document.getElementById('progress-chart');
-    const verbChartCanvas = document.getElementById('verb-chart');
+    const lifestyleChartCanvas = document.getElementById('lifestyle-chart');
+    const lifestyleChartDrilldownContainer = document.getElementById('lifestyle-chart-drilldown');
+    const drilldownTitle = document.getElementById('drilldown-title');
+    const drilldownChartCanvas = document.getElementById('drilldown-chart');
+    const backToLifestyleChartBtn = document.getElementById('back-to-lifestyle-chart-btn');
+    const taskDetailPopup = document.getElementById('task-detail-popup');
+    const closeTaskDetailPopupBtn = document.getElementById('close-task-popup-btn');
+    const taskDetailTitle = document.getElementById('task-detail-title');
+    const taskDetailContent = document.getElementById('task-detail-content');
+
 
     // Add Positive Page
     const addPositiveForm = document.getElementById('add-positive-form');
@@ -69,8 +79,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let templatePageMonth = currentMonth;
     let templatePageYear = currentYear;
     let myChart;
-    let verbChart;
+    let lifestyleChart;
+    let drilldownChart;
     let myTemplates = [];
+    let lifestyleData = {};
 
     // --- Templates ---
     const standardTemplates = [
@@ -109,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await renderPositivesForDay(selectedDate);
         const activeRange = document.querySelector('.toggle-btn.active').dataset.range;
         await renderChart(activeRange);
-        await renderVerbChart();
+        await renderLifestyleChart();
     };
 
     // --- Event Listeners ---
@@ -120,6 +132,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     cancelPositiveBtn.addEventListener('click', async () => await showPage(homePage));
     cancelFromTemplateBtn.addEventListener('click', async () => await showPage(homePage));
+    backToLifestyleChartBtn.addEventListener('click', () => {
+        lifestyleChartDrilldownContainer.classList.add('hidden');
+        document.getElementById('lifestyle-chart-container').classList.remove('hidden');
+    });
 
     monthSelector.addEventListener('change', async () => {
         currentMonth = parseInt(monthSelector.value, 10);
@@ -146,6 +162,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     closeTooltipBtn.addEventListener('click', () => {
         difficultyTooltip.classList.remove('visible');
+    });
+
+    closeTaskDetailPopupBtn.addEventListener('click', () => {
+        taskDetailPopup.classList.add('hidden');
     });
 
     // --- Custom Dropdown Logic ---
@@ -289,7 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await renderCalendar(currentMonth, currentYear);
             const activeRange = document.querySelector('.toggle-btn.active').dataset.range;
             await renderChart(activeRange);
-            await renderVerbChart();
+            await renderLifestyleChart();
         }
     });
 
@@ -299,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.classList.add('active');
             const range = e.target.getAttribute('data-range');
             await renderChart(range);
-            await renderVerbChart();
+            await renderLifestyleChart();
         });
     });
 
@@ -368,6 +388,29 @@ document.addEventListener('DOMContentLoaded', () => {
     saveFromTemplateBtnBottom.addEventListener('click', saveFromTemplate);
 
     // --- Rendering & Helper Functions ---
+    const splitLabel = (label, maxLength = 20) => {
+        const words = label.split(' ');
+        if (words.length === 1) { // If only one word, just return it as a single line array
+            return [label];
+        }
+
+        const lines = [];
+        let currentLine = '';
+
+        words.forEach(word => {
+            if ((currentLine + word).length > maxLength && currentLine.length > 0) {
+                lines.push(currentLine.trim());
+                currentLine = '';
+            }
+            currentLine += word + ' ';
+        });
+
+        if (currentLine.trim().length > 0) {
+            lines.push(currentLine.trim());
+        }
+
+        return lines;
+    };
     const populateMainSelectors = () => {
         const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         monthSelector.innerHTML = '';
@@ -722,38 +765,60 @@ document.addEventListener('DOMContentLoaded', () => {
         return { startStr, endStr };
     };
 
-    const renderVerbChart = async () => {
-        if (verbChart) {
-            verbChart.destroy();
+    const renderLifestyleChart = async () => {
+        if (lifestyleChart) {
+            lifestyleChart.destroy();
         }
 
         if (!currentUser) {
+            lifestyleChart = new Chart(lifestyleChartCanvas, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: 'Sign in to see your Lifestyle Analysis',
+                            font: { size: 16 },
+                            color: '#666'
+                        }
+                    },
+                    scales: {
+                        y: { ticks: { display: false }, grid: { display: false }, border: { display: false } },
+                        x: { ticks: { display: false }, grid: { display: false }, border: { display: false } }
+                    }
+                }
+            });
             return;
         }
 
         const { startStr, endStr } = getDateRangeForChart();
         const rangePositives = await getPositivesByDateRange(startStr, endStr);
         
-        const lifestyleData = {};
+        const categoryData = {};
         Object.keys(lifestyleCategories).forEach(category => {
-            lifestyleData[category] = { totalScore: 0, count: 0, positives: [] };
+            categoryData[category] = { totalScore: 0, count: 0, positives: [] };
         });
 
         rangePositives.forEach(p => {
             const category = classifyPositiveToLifestyle(p.name);
-            lifestyleData[category].totalScore += p.score;
-            lifestyleData[category].count++;
-            lifestyleData[category].positives.push(p.name);
+            categoryData[category].totalScore += p.score;
+            categoryData[category].count++;
+            categoryData[category].positives.push(p);
         });
 
-        const activeCategoryData = Object.keys(lifestyleData)
-            .filter(cat => lifestyleData[cat].count > 0)
-            .map(cat => ({
-                category: cat,
-                totalScore: lifestyleData[cat].totalScore,
-                count: lifestyleData[cat].count,
-                positives: lifestyleData[cat].positives,
-                color: categoryColors[cat]
+        const activeCategoryData = Object.entries(categoryData)
+            .filter(([_, data]) => data.count > 0)
+            .map(([category, data]) => ({
+                category,
+                ...data,
+                color: categoryColors[category]
             }))
             .sort((a, b) => b.totalScore - a.totalScore);
 
@@ -762,21 +827,104 @@ document.addEventListener('DOMContentLoaded', () => {
         const colors = activeCategoryData.map(d => d.color);
         const borderColors = colors.map(c => c.replace('0.7', '1'));
 
-        const chartLifestyleData = {};
-        activeCategoryData.forEach(d => {
-            chartLifestyleData[d.category] = { 
-                count: d.count, 
-                totalScore: d.totalScore, 
-                positives: d.positives 
-            };
-        });
+        lifestyleData = {
+            labels,
+            datasets: [{
+                label: 'Score by Life Area',
+                data: scores,
+                backgroundColor: colors,
+                borderColor: borderColors,
+                borderWidth: 1,
+                // Custom property to hold the detailed data
+                categoryDetails: activeCategoryData
+            }]
+        };
 
-        verbChart = new Chart(verbChartCanvas, {
+        lifestyleChart = new Chart(lifestyleChartCanvas, {
+            type: 'bar',
+            data: lifestyleData,
+            options: {
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Total Score' }
+                    },
+                    y: { title: { display: false } }
+                },
+                responsive: true,
+                maintainAspectRatio: false,
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const chartElement = elements[0];
+                        const index = chartElement.index;
+                        const categoryDetails = lifestyleData.datasets[0].categoryDetails[index];
+                        if (categoryDetails) {
+                            renderLifestyleDrilldown(categoryDetails);
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const details = lifestyleData.datasets[0].categoryDetails[context.dataIndex];
+                                return `${details.count} action(s), ${details.totalScore} total score`;
+                            },
+                            afterLabel: function(context) {
+                                const details = lifestyleData.datasets[0].categoryDetails[context.dataIndex];
+                                const sample = details.positives.slice(0, 3).map(p => `  - ${p.name.substring(0, 40)}`);
+                                return sample;
+                            }
+                        }
+                    },
+                    legend: { display: false }
+                }
+            }
+        });
+    };
+
+    const renderLifestyleDrilldown = (categoryData) => {
+        if (drilldownChart) {
+            drilldownChart.destroy();
+        }
+
+        document.getElementById('lifestyle-chart-container').classList.add('hidden');
+        lifestyleChartDrilldownContainer.classList.remove('hidden');
+        drilldownTitle.textContent = `Breakdown for ${categoryData.category}`;
+
+        const uniqueTasks = [...categoryData.positives.reduce((map, p) => {
+            if (!map.has(p.name)) {
+                map.set(p.name, {
+                    name: p.name,
+                    count: 0,
+                    totalScore: 0,
+                    avgScore: 0,
+                    dates: []
+                });
+            }
+            const existing = map.get(p.name);
+            existing.count += p.count;
+            existing.totalScore += p.score;
+            existing.dates.push(p.date);
+            existing.avgScore = existing.totalScore / existing.count;
+            return map;
+        }, new Map()).values()];
+
+        uniqueTasks.sort((a, b) => b.totalScore - a.totalScore);
+
+        const labels = uniqueTasks.map(p => splitLabel(p.name));
+        const scores = uniqueTasks.map(p => p.totalScore);
+        const baseColor = categoryColors[categoryData.category] || 'rgba(149, 165, 166, 0.7)';
+        const colors = Array(labels.length).fill(baseColor);
+        const borderColors = colors.map(c => c.replace('0.7', '1'));
+
+        drilldownChart = new Chart(drilldownChartCanvas, {
             type: 'bar',
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Score by Life Area',
+                    label: 'Total Score',
                     data: scores,
                     backgroundColor: colors,
                     borderColor: borderColors,
@@ -785,50 +933,43 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             options: {
                 indexAxis: 'y',
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Total Score'
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: false
-                        }
-                    }
-                },
+                scales: { x: { beginAtZero: true } },
                 responsive: true,
                 maintainAspectRatio: false,
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const taskData = uniqueTasks[index];
+                        showTaskDetailPopup(taskData);
+                    }
+                },
                 plugins: {
+                    legend: { display: false },
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                const category = context.label;
-                                const data = chartLifestyleData[category];
-                                if (data) {
-                                    return `${data.count} action(s), ${data.totalScore} total score`;
-                                }
-                                return '';
-                            },
-                            afterLabel: function(context) {
-                                const category = context.label;
-                                const data = chartLifestyleData[category];
-                                if (data && data.positives.length > 0) {
-                                    const sample = data.positives.slice(0, 3).map(p => `  - ${p.substring(0, 40)}${p.length > 40 ? '...' : ''}`);
-                                    return sample;
-                                }
-                                return '';
+                                const task = uniqueTasks[context.dataIndex];
+                                return `Total Score: ${task.totalScore} (x${task.count})`;
                             }
                         }
-                    },
-                    legend: {
-                        display: false
                     }
                 }
             }
         });
+    };
+
+    const showTaskDetailPopup = (taskData) => {
+        taskDetailTitle.innerHTML = `<span class="popup-title-prefix">Details for</span> ${taskData.name}`;
+        const content = `
+            <p><strong>Times Done:</strong> ${taskData.count}</p>
+            <p><strong>Total Score:</strong> ${taskData.totalScore}</p>
+            <p><strong>Average Score per Entry:</strong> ${(taskData.totalScore / taskData.count).toFixed(1)}</p>
+            <p><strong>Dates:</strong></p>
+            <ul>${taskData.dates.slice(0, 5).map(d => `<li>${d}</li>`).join('')}</ul>
+            ${taskData.dates.length > 5 ? '<p>...</p>' : ''}
+        `;
+        taskDetailContent.innerHTML = content;
+        taskDetailPopup.classList.remove('hidden');
     };
 
     const populateMyTemplates = async () => {
@@ -955,17 +1096,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const init = async () => {
         // Initial UI Render
         showPage(homePage); // Make sure the home page is visible
-        document.body.classList.remove('loading');
         populateMainSelectors();
         await renderCalendar(currentMonth, currentYear);
         await renderPositivesForDay(selectedDate); // Show empty state for today
         await renderChart('week');
+        await renderLifestyleChart();
         updateButtonStates(); // Set initial button states
 
         // Authentication Handling
         onAuthStateChange(async (user) => {
             currentUser = user;
             await updateUIForAuthState();
+            document.body.classList.remove('loading');
         });
 
         // Event Listeners
